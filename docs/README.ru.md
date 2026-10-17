@@ -40,7 +40,7 @@
 | `pkgs/nothing-spacewar-mobile-ui` | прежний слой v3, заменён; для отката |
 | `pkgs/omarchy-osk-spacewar` | пакет нашей клавиатуры. Исходник форка: отдельный репозиторий `omarchy-osk-spacewar` (см. ниже) |
 | `pkgs/hyprgrass` | плагин жестов, больше не используется |
-| `tools/build-rootfs.sh`, `tools/verify-image.sh`, `tools/export-image.sh` | сборка образа rootfs+boot, проверка (122 пункта), экспорт с хешами |
+| `tools/build-rootfs.sh`, `tools/verify-image.sh`, `tools/export-image.sh` | сборка образа rootfs+boot, проверка (132 пункта), экспорт с хешами |
 | `device-info/` | getprop и разделы стоковой прошивки |
 
 Образы, бэкапы и прошивки производителя в репозиторий не входят: прошивки берутся с вашего телефона.

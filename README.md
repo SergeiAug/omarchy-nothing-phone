@@ -36,7 +36,7 @@ Built by [@SergeiAug](https://github.com/SergeiAug), with help from AI coding to
 | Path | Contents |
 |---|---|
 | `pkgs/` | PKGBUILDs: kernel, firmware packaging, boot image, audio UCM, modem stack, mobile shell, keyboard |
-| `tools/` | rootfs + boot image builder, a 122-check image verifier, export with checksums |
+| `tools/` | rootfs + boot image builder, a 132-check image verifier, export with checksums |
 | `docs/notes.md` | how it was done: the problems we hit and how each was solved |
 | `docs/README.ru.md`, `docs/flashing.ru.md` | detailed state, flashing and rollback (Russian) |
 
