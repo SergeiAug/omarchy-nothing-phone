@@ -1,0 +1,11 @@
+[Unit]
+Description=Retry Spacewar LPASS VA macro probe if the sound card is missing
+After=systemd-udev-trigger.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/spacewar-audio-reprobe
+TimeoutStartSec=90
+
+[Install]
+WantedBy=multi-user.target

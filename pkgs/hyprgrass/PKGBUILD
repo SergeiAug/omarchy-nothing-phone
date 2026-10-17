@@ -1,0 +1,33 @@
+# Maintainer: Spacewar contributors
+pkgname=hyprgrass
+pkgver=0.8.2.r1.g8e605468
+pkgrel=1
+pkgdesc='Touch gestures pinned for Hyprland 0.56.2'
+arch=('aarch64')
+url='https://github.com/horriblename/hyprgrass'
+license=('BSD-3-Clause')
+depends=('hyprland=0.56.2' 'libinput' 'pixman' 'libdrm' 'libxkbcommon' 'wayland' 'lua')
+makedepends=('git' 'meson' 'cmake' 'glm')
+_commit=8e605468cbf429791d61ddbfaeb14ff5e08fec3e
+_wftouch=8974eb0f6a65464b63dd03b842795cb441fb6403
+source=("git+$url#commit=$_commit"
+        "git+https://github.com/WayfireWM/wf-touch#commit=$_wftouch")
+sha256sums=('SKIP' 'SKIP')
+
+prepare() {
+  cd hyprgrass || return
+  git submodule init
+  git config submodule.wf-touch.url "$srcdir/wf-touch"
+  git -c protocol.file.allow=always submodule update
+}
+
+build() {
+  # arch-meson enables auto features; the unit tests would then require doctest.
+  arch-meson hyprgrass build -Dtests=disabled -Dwf-touch:tests=disabled
+  meson compile -C build
+}
+
+package() {
+  install -Dm755 build/src/libhyprgrass.so "$pkgdir/usr/lib/hyprgrass/libhyprgrass.so"
+  install -Dm644 hyprgrass/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

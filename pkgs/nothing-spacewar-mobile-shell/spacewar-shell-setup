@@ -1,0 +1,146 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: MIT
+import argparse
+import copy
+from datetime import datetime, timezone
+import fcntl
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import tarfile
+import tempfile
+
+ROOT = Path('/usr/share/nothing-spacewar/mobile-shell')
+ENABLED = ['omamobile.bar', 'omamobile.quicksettings', 'omamobile.switcher', 'spacewar.gestures', 'omamobile.home', 'omamobile.launcher', 'io.github.yeutterg.onscreen-keyboard']
+DISABLED = ['omarchy.dock', 'spacewar.dock', 'spacewar.shade', 'spacewar.switcher',
+            'omarchy.bar']
+
+
+def atomic(path, text):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(dir=path.parent)
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(name, path)
+    finally:
+        if os.path.exists(name):
+            os.unlink(name)
+
+
+def plan(config, root):
+    shell = config / 'omarchy/shell.json'
+    lua = config / 'hypr/hyprland.lua'
+    for path in [shell, lua, config / 'hypr/phone.lua']:
+        if path.is_symlink():
+            raise ValueError(f'refusing symlinked config: {path}')
+    current = json.loads(shell.read_text()) if shell.exists() else {}
+    if not isinstance(current, dict):
+        raise ValueError('shell.json must be an object')
+    result = copy.deepcopy(current)
+    for key, kind in [('bar', dict), ('plugins', list), ('disabledPlugins', list)]:
+        if key in result and not isinstance(result[key], kind):
+            raise ValueError(f'invalid {key}')
+    if any(not isinstance(e, dict) or not isinstance(e.get('id'), str) for e in result.get('plugins', [])):
+        raise ValueError('invalid plugin entry')
+    result.setdefault('bar', {}).update(id='omamobile.bar', position='top', showBatteryPercent=True)
+    entries = [e for e in result.get('plugins', []) if e['id'] not in DISABLED]
+    entries += [{'id': ident} for ident in ENABLED if not any(e['id'] == ident for e in entries)]
+    result['plugins'] = entries
+    result['disabledPlugins'] = list(dict.fromkeys([e for e in result.get('disabledPlugins', []) if e not in ENABLED] + DISABLED))
+    text = lua.read_text() if lua.exists() else ''
+    text = ''.join(line for line in text.splitlines(keepends=True)
+                   if '-- spacewar-mobile' not in line and '-- spacewar-device' not in line
+                   and '-- spacewar-shell' not in line)
+    line = f'dofile("{root}/phone-device.lua") -- spacewar-shell\n'
+    text = text.rstrip() + '\n' + line
+    # phone.lua used by previous setup may still require the removed package.
+    phone = config / 'hypr/phone.lua'
+    phone_text = phone.read_text() if phone.exists() else None
+    if phone_text is not None:
+        phone_text = re.sub(r'^.*dofile\([\"\']?/usr/share/nothing-spacewar/mobile/phone-device.lua.*\n?', '', phone_text, flags=re.M)
+        phone_text = re.sub(r'^.*hl\.plugin\.load\([^\n]*hyprgrass[^\n]*\n?', '', phone_text, flags=re.M)
+    links = {}
+    for ident in ENABLED + ['spacewar.runtime']:
+        target = root.parent / 'osk' if ident == 'io.github.yeutterg.onscreen-keyboard' else root / 'plugins' / ident
+        if ident != 'spacewar.runtime' and not (target / 'manifest.json').is_file():
+            raise ValueError(f'missing plugin {target}')
+        dest = config / 'omarchy/plugins' / ident
+        if os.path.lexists(dest) and not (dest.is_symlink() and dest.resolve() == target.resolve()):
+            raise ValueError(f'plugin path already owned: {dest}')
+        links[ident] = str(target)
+    return dict(shell=json.dumps(result, ensure_ascii=False, indent=2)+'\n', lua=text, phone=phone_text, links=links)
+
+
+def apply(config, saved):
+    for ident, target in saved['plan']['links'].items():
+        dest = config / 'omarchy/plugins' / ident
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if not os.path.lexists(dest):
+            dest.symlink_to(target)
+    atomic(config / 'hypr/hyprland.lua', saved['plan']['lua'])
+    if saved['plan']['phone'] is not None:
+        atomic(config / 'hypr/phone.lua', saved['plan']['phone'])
+    atomic(config / 'omarchy/shell.json', saved['plan']['shell'])
+
+
+def configure(config, state, root, undo=False):
+    state.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with (state / 'setup.lock').open('w') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        journal = state / 'setup.json'
+        if undo:
+            if not journal.exists():
+                return
+            saved = json.loads(journal.read_text())
+            with tarfile.open(saved['archive']) as archive:
+                for member in archive.getmembers():
+                    name = Path(member.name)
+                    if name.is_absolute() or '..' in name.parts or name.parts[0] not in ('hypr', 'omarchy'):
+                        raise ValueError('unsafe archive path')
+                for name in ['hypr', 'omarchy']:
+                    path = config / name
+                    if path.is_symlink():
+                        raise ValueError('refusing symlinked config directory')
+                    if path.exists():
+                        shutil.rmtree(path)
+                archive.extractall(config, filter='fully_trusted')
+            journal.unlink()
+            return
+        if journal.exists():
+            saved = json.loads(journal.read_text())
+            if not saved['complete']:
+                apply(config, saved)
+                saved['complete'] = True
+                atomic(journal, json.dumps(saved))
+            return
+        for name in ['hypr', 'omarchy']:
+            if (config / name).is_symlink():
+                raise ValueError('refusing symlinked config directory')
+        pending = plan(config, root)
+        archive_path = state / ('backup-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ') + '.tar')
+        with tarfile.open(archive_path, 'w', dereference=False) as archive:
+            for name in ['hypr', 'omarchy']:
+                if (config / name).exists():
+                    archive.add(config / name, arcname=name)
+        archive_path.chmod(0o600)
+        saved = dict(archive=str(archive_path), plan=pending, complete=False)
+        atomic(journal, json.dumps(saved))
+        apply(config, saved)
+        saved['complete'] = True
+        atomic(journal, json.dumps(saved))
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--undo', action='store_true')
+    args = parser.parse_args()
+    try:
+        configure(Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config')),
+                  Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state')) / 'spacewar-shell', ROOT, args.undo)
+    except (OSError, ValueError, KeyError, tarfile.TarError) as error:
+        raise SystemExit(str(error))

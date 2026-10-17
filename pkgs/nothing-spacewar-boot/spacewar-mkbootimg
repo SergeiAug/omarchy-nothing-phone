@@ -1,0 +1,79 @@
+#!/bin/bash
+set -euo pipefail
+
+usage() {
+  echo 'Usage: spacewar-mkbootimg [--rebuild-initramfs] [--image FILE] [--dtb FILE] [--initramfs FILE] [--cmdline FILE] [--deviceinfo FILE] [--output FILE]'
+}
+fail() { echo "spacewar-mkbootimg: $*" >&2; exit 1; }
+image=/boot/Image
+dtb=/boot/dtbs/qcom/sm7325-nothing-spacewar.dtb
+initramfs=/boot/initramfs-linux-sc7280.img
+cmdline_file=/etc/kernel/cmdline
+deviceinfo=/usr/share/nothing-spacewar/deviceinfo
+output=/boot/boot.img
+rebuild=false
+while (($#)); do
+  case $1 in
+    --rebuild-initramfs) rebuild=true; shift ;;
+    --image|--dtb|--initramfs|--cmdline|--deviceinfo|--output)
+      (($# >= 2)) || fail "missing value for $1"
+      case $1 in
+        --image) image=$2 ;; --dtb) dtb=$2 ;; --initramfs) initramfs=$2 ;;
+        --cmdline) cmdline_file=$2 ;; --deviceinfo) deviceinfo=$2 ;; --output) output=$2 ;;
+      esac
+      shift 2 ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage >&2; fail "unknown argument: $1" ;;
+  esac
+done
+[[ -r $deviceinfo ]] || fail "cannot read $deviceinfo"
+source "$deviceinfo"
+[[ $deviceinfo_header_version == 2 && $deviceinfo_append_dtb == true ]] || fail 'expected header v2 and append_dtb=true'
+[[ -s $cmdline_file ]] || fail "write the target root=... kernel command line to $cmdline_file first (see pkgs/README.md)"
+cmdline=$(<"$cmdline_file")
+[[ $cmdline != *$'\n'* && $cmdline != *$'\r'* ]] || fail 'cmdline must be a single line'
+[[ $cmdline =~ (^|[[:space:]])root=[^[:space:]]+ ]] || fail 'cmdline must specify the target root=...'
+[[ -s $image && -s $dtb ]] || fail 'kernel Image or DTB is missing'
+command -v mkbootimg >/dev/null || fail 'mkbootimg is required (Arch: android-tools)'
+output_dir=$(dirname -- "$output")
+[[ -d $output_dir && ! -L $output && ( ! -e $output || -f $output ) ]] || fail 'output must be a regular file in an existing directory'
+exec {lock}< "$output_dir"
+flock -x "$lock"
+for stale in "$output_dir"/.spacewar-mkbootimg.*; do
+  if [[ ${stale##*/} =~ ^\.spacewar-mkbootimg\.[[:alnum:]]{6}$ && -d $stale && ! -L $stale && -O $stale ]]; then
+    rm -rf -- "$stale"
+  fi
+done
+if $rebuild; then
+  # Rebuild explicitly: a failed earlier pacman mkinitcpio hook must not leave a stale ramdisk in boot.img.
+  kernver=$(</usr/share/kernel/linux-sc7280/kernel.release)
+  mkinitcpio -k "$kernver" -g "$initramfs"
+fi
+[[ -s $initramfs ]] || fail "initramfs missing: $initramfs"
+# Keep the temporary output on the destination filesystem so replacement is atomic.
+work=$(mktemp -d "$output_dir/.spacewar-mkbootimg.XXXXXX")
+trap 'rm -rf -- "$work"' EXIT
+# Makefile.zboot pads Image to the low 32 bits of image_size before gzip (pmOS vmlinuz).
+magic=$(od --endian=little -An -tx4 -j56 -N4 -- "$image")
+[[ ${magic// /} == 644d5241 ]] || fail '--image must be an uncompressed ARM64 Image'
+image_size=$(od --endian=little -An -tu4 -j16 -N4 -- "$image")
+image_size=${image_size// /}
+[[ $image_size =~ ^[0-9]+$ && $image_size -gt 0 ]] || fail 'invalid ARM64 image_size'
+cp -- "$image" "$work/Image"
+truncate -s "$image_size" "$work/Image"
+gzip -n -c -- "$work/Image" > "$work/Image.gz-dtb"
+cat -- "$dtb" >> "$work/Image.gz-dtb"
+mkbootimg --kernel "$work/Image.gz-dtb" --ramdisk "$initramfs" \
+  --header_version "$deviceinfo_header_version" \
+  --pagesize "$deviceinfo_flash_pagesize" --base "$deviceinfo_flash_offset_base" \
+  --kernel_offset "$deviceinfo_flash_offset_kernel" \
+  --ramdisk_offset "$deviceinfo_flash_offset_ramdisk" \
+  --second_offset "$deviceinfo_flash_offset_second" \
+  --tags_offset "$deviceinfo_flash_offset_tags" \
+  --dtb_offset "$deviceinfo_flash_offset_dtb" --dtb "$dtb" \
+  --cmdline "$cmdline" --output "$work/boot.img"
+chmod 644 "$work/boot.img"
+sync -- "$work/boot.img"
+mv -f -- "$work/boot.img" "$output"
+sync -f -- "$output_dir"
+printf 'Created %s (not flashed)\n' "$output"

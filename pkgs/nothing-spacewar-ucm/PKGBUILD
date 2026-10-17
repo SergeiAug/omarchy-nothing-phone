@@ -1,0 +1,32 @@
+pkgname=nothing-spacewar-ucm
+pkgver=1
+pkgrel=2
+pkgdesc='ALSA UCM configuration for Nothing Phone (1)'
+arch=('any')
+url='https://wiki.postmarketos.org/wiki/Nothing_Phone_1_(nothing-spacewar)'
+license=('BSD-3-Clause')
+depends=('alsa-ucm-conf')
+optdepends=('dummystreamhack: experimental Voice Call, with a user dummystreamhack@.service')
+source=('spacewar.conf'
+        '51-spacewar-s16.conf'
+        'HiFi.conf'
+        'VoiceCall.conf'
+        'LICENSE' 'README.md')
+sha512sums=('8b67a6b907284191bfe19ea4f874d35cd90838aa80f1fe96afefc4e27a2b410462e99889c74b117a201ea209d2465aa555582a163c0d65f18c841c0e194e13b8'
+            '1b7e1a674928f46706a1840b558b915182e0e8b614a348e91374e8d3cbdf6611b0989b58b902cb6227b1a3f20bde05d4e25223ebc94199d45382afd9fc623ff4'
+            '026ae4c88f1d15ed79a6b3d9a60d5f72553c76f13b726f2cbb51dd445e3a9f19079d05f085ebd22392762889810b60c8c5e451ba5678c4c81b94d062a0e95564'
+            'b7797ec1f2c2284dbe98ef7071e966c578dd53aaa25760b5f980fbdb90309f0e676717b508a243dad00ff49986ef992aa70495fadde89d7b62b565727c1c3fa4'
+            '71d965dda348fb3c0ef0417c006b40d96feafa24af7701d0ff67811a0b8590357b737aae2135847798e376cc8ec948ab38520af24ea15892368ca89c7130fa36'
+            '48cb81ccbb3d6b101f0b77d7ef19de8ca28d2a1e8b93544b2dd8b60c17a10d0bde163cdd895f1db2c8d8ad75cac65853f99a2216f286f5695cca0c4c50541faa')
+
+package() {
+  local profile
+  for profile in spacewar HiFi VoiceCall; do
+    install -Dm644 "$srcdir/$profile.conf" "$pkgdir/usr/share/alsa/ucm2/Nothing/spacewar/$profile.conf"
+  done
+  install -d "$pkgdir/usr/share/alsa/ucm2/conf.d/sm8250"
+  ln -s ../../Nothing/spacewar/spacewar.conf "$pkgdir/usr/share/alsa/ucm2/conf.d/sm8250/NP1.conf"
+  install -Dm644 "$srcdir/51-spacewar-s16.conf" "$pkgdir/usr/share/wireplumber/wireplumber.conf.d/51-spacewar-s16.conf"
+  install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 "$srcdir/README.md" "$pkgdir/usr/share/doc/$pkgname/README.md"
+}

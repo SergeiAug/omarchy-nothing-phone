@@ -1,0 +1,35 @@
+pkgname=nothing-spacewar-boot
+pkgver=1
+pkgrel=4
+pkgdesc='Nothing Phone (1) initramfs configuration and boot.img generator'
+arch=('any')
+url='https://wiki.postmarketos.org/wiki/Nothing_Phone_1_(nothing-spacewar)'
+license=('MIT')
+depends=('bash' 'coreutils' 'util-linux' 'gzip' 'mkinitcpio' 'android-tools' 'linux-sc7280' 'firmware-nothing-spacewar')
+optdepends=('linux-firmware-qcom: Adreno firmware' 'linux-firmware-atheros: Wi-Fi and Bluetooth firmware')
+backup=('etc/mkinitcpio.conf.d/spacewar.conf')
+source=('81-libssc-nothing-spacewar.rules' 'deviceinfo' 'spacewar.conf'
+        'spacewar-mkbootimg' '99-spacewar-boot.hook'
+        'spacewar-usb-reprobe' 'spacewar-usb-reprobe.service'
+        'spacewar-audio-reprobe' 'spacewar-audio-reprobe.service')
+sha512sums=('2c16ba75e0077b2b1eaefa4c73b287475505a1aeb291ec29316d41cc094277320f9d2aaabfd91eb1dc0f488ab2d61a94faef16e7afe0f1e226779113761b9a37'
+            '90ba83c8ebb09bfb279962570b39dc43bba774595a73d4c656f75e377db407e2f4d563899187a32cc34e9ab1db33d5281f6a517befb440952bfc9e722c9e8eba'
+            '122cdd9e4ba984c47f663efe761e7295b2c5e8b3584ab4d18ec7bb957600b71fb03ecfff6f6c7f2f5d09b068ed2d53122b5608b06349b32fe0eaa8f644dbd832'
+            '106fd685c10fa6be86a698eaff5eac0b80b5c65a8e45b97f5a959845ccec087149171f07fc647c4db7183ef85dfd9fe9aaffcf884b7af6c3f8fed6cb72159e0e'
+            '0c4577f636418e5a5be99bba68898e7efdc45eec1f731b874dd997e38d72fbd8af6f0bc7d34caeb61e8e7de09e9fb41fe6a635a3abf3c1aa4a2d28a16f37b9bc'
+            '7bf56ccb85cd7ab503c9583821fec7de3c47a3bed8ee5c75044c7f8022cf9e53741dc9c86ad2afbb5db5eda923325dbaa838bb225325dba3e9e5faac9d00c941'
+            'e343c417e5dcaeeb325f201f7c37ba2ca8feb949753c1febd01c63cad1ee4b8d24d3e28e86fe3cef5a1ffd36bf3e11aefc0e5db4be72a4fb8eb457a3bd329123'
+            '156dd87b7f8d0da9e32cc6457849ac3058ee670119003aa269b328de7c3ed1273c85c190bc8889df89e34374be03990048165662d6cd82c77a17f1ad1212b7d7'
+            '616585850f8693aa6bfe40f02d067493997a25cbe7f432bff32c5d973844f1badf97635e962aaf3f506ed556868c3078730a8724dcd48a37f6fac954cc938cb9')
+
+package() {
+  install -Dm644 "$srcdir/81-libssc-nothing-spacewar.rules" "$pkgdir/usr/lib/udev/rules.d/81-libssc-nothing-spacewar.rules"
+  install -Dm644 "$srcdir/deviceinfo" "$pkgdir/usr/share/nothing-spacewar/deviceinfo"
+  install -Dm644 "$srcdir/spacewar.conf" "$pkgdir/etc/mkinitcpio.conf.d/spacewar.conf"
+  install -Dm755 "$srcdir/spacewar-mkbootimg" "$pkgdir/usr/bin/spacewar-mkbootimg"
+  install -Dm644 "$srcdir/99-spacewar-boot.hook" "$pkgdir/usr/share/libalpm/hooks/99-spacewar-boot.hook"
+  install -Dm755 "$srcdir/spacewar-usb-reprobe" "$pkgdir/usr/bin/spacewar-usb-reprobe"
+  install -Dm644 "$srcdir/spacewar-usb-reprobe.service" "$pkgdir/usr/lib/systemd/system/spacewar-usb-reprobe.service"
+  install -Dm755 "$srcdir/spacewar-audio-reprobe" "$pkgdir/usr/bin/spacewar-audio-reprobe"
+  install -Dm644 "$srcdir/spacewar-audio-reprobe.service" "$pkgdir/usr/lib/systemd/system/spacewar-audio-reprobe.service"
+}

@@ -1,0 +1,17 @@
+pkgbase = hexagonrpcd
+	pkgdesc = Qualcomm HexagonFS daemon
+	pkgver = 0.5.0
+	pkgrel = 1
+	url = https://github.com/linux-msm/hexagonrpc
+	arch = aarch64
+	arch = x86_64
+	license = GPL-3.0-or-later
+	makedepends = meson
+	source = hexagonrpcd-0.5.0.tar.gz::https://github.com/linux-msm/hexagonrpc/archive/refs/tags/v0.5.0.tar.gz
+	source = 10-fastrpc.rules
+	source = fastrpc.sysusers
+	sha256sums = 2173985932ab68d8ac593f9954357123bdbbbe9ba5f1b17a098d9cbcec22c5d5
+	sha256sums = 41dfc4e8c4fd88f461a5a6e4a4e86849eb302f8bcb2b5ce2efa9690f5415d52d
+	sha256sums = a2f6b4669f37cd3a8d0b76b1ca15a5030bbaf2f13b0ed857802bee336a7fea66
+
+pkgname = hexagonrpcd

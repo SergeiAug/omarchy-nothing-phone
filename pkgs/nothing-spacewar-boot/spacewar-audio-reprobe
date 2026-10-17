@@ -1,0 +1,21 @@
+#!/bin/bash
+# va_macro can time out (-110) when it probes before the ADSP audio PD is up; the
+# sound card then never assembles. Reload the module once the DSP is running.
+set -euo pipefail
+cards=/proc/asound/cards
+for ((i = 0; i < 300; i++)); do
+  grep -q NP1 "$cards" && exit 0
+  for rp in /sys/class/remoteproc/*; do
+    [[ $(<"$rp/name") == adsp && $(<"$rp/state") == running ]] && break 2
+  done
+  sleep 0.1
+done
+# Give the PD a moment after remoteproc reports running, then check again.
+for ((i = 0; i < 50; i++)); do grep -q NP1 "$cards" && exit 0; sleep 0.2; done
+[[ -e /sys/bus/platform/drivers/va_macro/3370000.codec ]] && exit 0
+echo 'spacewar-audio-reprobe: va_macro not bound, reloading' >&2
+modprobe -r snd_soc_lpass_va_macro
+modprobe snd_soc_lpass_va_macro
+for ((i = 0; i < 100; i++)); do grep -q NP1 "$cards" && exit 0; sleep 0.1; done
+echo 'spacewar-audio-reprobe: sound card still missing' >&2
+exit 1

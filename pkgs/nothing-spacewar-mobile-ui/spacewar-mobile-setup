@@ -1,0 +1,290 @@
+#!/usr/bin/python3
+import argparse
+import copy
+import fcntl
+import json
+import os
+from pathlib import Path
+import tempfile
+
+OSK = 'io.github.yeutterg.onscreen-keyboard'
+IDS = ['spacewar.shade', 'spacewar.switcher', 'spacewar.dock', OSK]
+BAR = dict(position='top', layout=dict(
+    left=[dict(id='omarchy.spacer', size=44), dict(id='omarchy.clock', format='HH:mm')],
+    centerBegin=[], center=[],
+    centerEnd=[], right=[dict(id='omarchy.' + name) for name in ['network', 'bluetooth', 'audio', 'power']]))
+ROOT = Path('/usr/share/nothing-spacewar/mobile')
+
+
+def atomic(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, name = tempfile.mkstemp(dir=path.parent, prefix='.' + path.name)
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(name, path)
+    finally:
+        if os.path.exists(name):
+            os.unlink(name)
+
+
+def encode(value):
+    return json.dumps(value, ensure_ascii=False, indent=2) + '\n'
+
+
+def load_config(text):
+    value = json.loads(text) if text is not None else {}
+    if not isinstance(value, dict):
+        raise ValueError('shell.json must be an object')
+    for key, kind in [('bar', dict), ('dock', dict), ('plugins', list), ('disabledPlugins', list)]:
+        if key in value and not isinstance(value[key], kind):
+            raise ValueError(f'{key} has an invalid type')
+    if any(not isinstance(entry, dict) or not isinstance(entry.get('id'), str)
+           for entry in value.get('plugins', [])):
+        raise ValueError('plugins must contain objects with string IDs')
+    return value
+
+
+def migrate_gestures(text):
+    import re
+    changes = []
+    pattern = re.compile(r'(?m)^[ \t]*(?:hl\.plugin\.hyprgrass|hg|hyprgrass)\.(?:bind|gesture)\s*[( {]')
+    spans = []
+    for match in pattern.finditer(text):
+        start = match.start()
+        opening = match.end() - 1
+        if text[opening] == ' ':
+            continue
+        stack, quote, escape = [], None, False
+        end = opening
+        for end in range(opening, len(text)):
+            char = text[end]
+            if quote:
+                if escape: escape = False
+                elif char == "\\": escape = True
+                elif char == quote: quote = None
+                continue
+            if char in "\"'": quote = char
+            elif char in '({[': stack.append(char)
+            elif char in ')}]':
+                if not stack: break
+                stack.pop()
+                if not stack: break
+        if stack or quote:
+            raise ValueError('incomplete gesture call in phone.lua')
+        call = text[start:end + 1]
+        if re.search(r'kind\s*=\s*["\']edge["\']', call) or re.search(r'edge:[udlr]', call):
+            marker = '-- spacewar-mobile migrated gesture ' + str(len(spans))
+            spans.append((start, end + 1, marker, call))
+    for start, end, marker, call in reversed(spans):
+        text = text[:start] + marker + text[end:]
+        changes.append((marker, call))
+    return text, changes
+
+
+def plugin_target(ident):
+    if ident == 'spacewar.dock':
+        return Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state')) / 'spacewar-mobile/dock'
+    return ROOT.parent / 'osk' if ident == OSK else ROOT / 'plugins' / ident
+
+
+def snapshot(path):
+    if path.is_symlink():
+        return dict(link=os.readlink(path))
+    return dict(text=path.read_text()) if path.exists() else None
+
+
+def restore(path, value):
+    path.unlink(missing_ok=True)
+    if value is not None:
+        if 'link' in value:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.symlink_to(value['link'])
+        else:
+            atomic(path, value['text'])
+
+
+def apply_saved(saved, config, extras):
+    plugins = config / 'omarchy/plugins'
+    plugins.mkdir(parents=True, exist_ok=True)
+    for ident in saved['links']:
+        link = plugins / ident
+        if not os.path.lexists(link):
+            link.symlink_to(plugin_target(ident))
+    atomic(config / 'hypr/phone.lua', saved['phone_applied'])
+    for path, entry in zip(extras, saved['extras']):
+        restore(path, entry['applied'])
+    atomic(config / 'omarchy/shell.json', encode(saved['applied']))
+    atomic(config / 'hypr/hyprland.lua', saved['lua_applied'])
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Enable the reversible Spacewar mobile profile')
+    parser.add_argument('--undo', action='store_true')
+    parser.add_argument('--lock', action='store_true', help='enable only the optional touch lock/power component')
+    args = parser.parse_args()
+    config = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config'))
+    state = Path(os.environ.get('XDG_STATE_HOME', Path.home() / '.local/state')) / 'spacewar-mobile'
+    state.mkdir(parents=True, exist_ok=True, mode=0o700)
+    lock = (state / 'lock').open('w')
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import lock_setup
+    if args.lock or args.undo:
+        lock_setup.configure(config, state, ROOT, atomic, encode, load_config, undo=args.undo)
+    if args.lock:
+        return
+    journal = state / 'setup.json'
+    shell = config / 'omarchy/shell.json'
+    lua = config / 'hypr/hyprland.lua'
+    plugins = config / 'omarchy/plugins'
+    device_line = 'require("hypr.phone") -- spacewar-device\n'
+    line = 'dofile("/usr/share/nothing-spacewar/mobile/phone-mobile.lua") -- spacewar-mobile\n'
+    raw = shell.read_text() if shell.exists() else None
+    current = load_config(raw)
+    lua_raw = lua.read_text() if lua.exists() else None
+    phone = config / 'hypr/phone.lua'
+    phone_raw = phone.read_text() if phone.exists() else None
+    if phone.is_symlink():
+        raise ValueError('refusing to replace symlinked phone.lua')
+    if shell.is_symlink() or lua.is_symlink():
+        raise ValueError('refusing to replace symlinked config files')
+    osk_config = config / 'omarchy/onscreen-keyboard.json'
+    fcitx = config / 'systemd/user/omarchy-fcitx5.service'
+    extras = [osk_config, fcitx]
+    if args.undo:
+        if not journal.exists():
+            return
+        saved = json.loads(journal.read_text())
+        original = load_config(saved['shell'])
+        applied = saved['applied']
+        if current == applied:
+            if saved['shell'] is None:
+                shell.unlink(missing_ok=True)
+            else:
+                atomic(shell, saved['shell'])
+        else:
+            # Restore only owned fields; preserve edits made after setup.
+            for key in ['position']:
+                if current.get('bar', {}).get(key) == applied['bar'][key]:
+                    if key in original.get('bar', {}):
+                        current['bar'][key] = original['bar'][key]
+                    else:
+                        current['bar'].pop(key, None)
+            layout = current.get('bar', {}).get('layout', {})
+            old_layout = original.get('bar', {}).get('layout', {})
+            for section, value in applied['bar']['layout'].items():
+                if layout.get(section) == value:
+                    if section in old_layout:
+                        layout[section] = old_layout[section]
+                    else:
+                        layout.pop(section, None)
+            if not layout and 'layout' not in original.get('bar', {}):
+                current.get('bar', {}).pop('layout', None)
+            if not current.get('bar') and 'bar' not in original:
+                current.pop('bar', None)
+            for key in ['plugins', 'disabledPlugins']:
+                owned = IDS if key == 'plugins' else IDS + ['omarchy.dock']
+                entries = current.get(key, [])
+                is_owned = lambda e: (e.get('id') if isinstance(e, dict) else e) in owned
+                current[key] = [e for e in entries if not is_owned(e)]
+                current[key] += [e for e in original.get(key, []) if is_owned(e)]
+                if not current[key] and key not in original:
+                    current.pop(key)
+            atomic(shell, encode(current))
+        if lua_raw == saved['lua_applied']:
+            if saved['lua'] is None:
+                lua.unlink(missing_ok=True)
+            else:
+                atomic(lua, saved['lua'])
+        elif lua_raw is not None:
+            atomic(lua, lua_raw.replace(line, '').replace(device_line, ''))
+        for ident in saved['links']:
+            link = plugins / ident
+            if link.is_symlink() and os.readlink(link) == str(plugin_target(ident)):
+                link.unlink()
+        if 'phone_applied' in saved and phone.exists() and phone.read_text() == saved['phone_applied']:
+            if saved['phone'] is None:
+                phone.unlink()
+            else:
+                atomic(phone, saved['phone'])
+        elif saved.get('phone') is not None and phone.exists():
+            restored = phone.read_text()
+            for marker, call in saved.get('gestures', []):
+                restored = restored.replace(marker, call)
+            atomic(phone, restored)
+        for path, entry in zip(extras, saved.get('extras', [])):
+            if snapshot(path) == entry['applied']:
+                restore(path, entry['original'])
+        journal.unlink()
+        if saved.get('mobile_dock'):
+            import shutil
+            shutil.rmtree(state / 'dock', ignore_errors=True)
+        return
+    if journal.exists():
+        saved = json.loads(journal.read_text())
+        if 'extras' in saved and not saved.get('complete'):
+            apply_saved(saved, config, extras)
+            saved['complete'] = True
+            atomic(journal, encode(saved))
+        print('Spacewar profile already set up; leaving user changes intact.')
+        return
+    for ident in IDS:
+        if ident == 'spacewar.dock':
+            continue
+        target = plugin_target(ident)
+        if not (target / 'manifest.json').is_file():
+            raise ValueError(f'missing installed plugin: {target}')
+        link = plugins / ident
+        if os.path.lexists(link) and not (link.is_symlink() and os.readlink(link) == str(target)):
+            raise ValueError(f'plugin path already owned by user: {link}')
+    if os.path.lexists(plugins / 'spacewar.dock'):
+        raise ValueError('plugin path already owned by user: spacewar.dock')
+    applied = copy.deepcopy(current)
+    applied.setdefault('bar', {}).update(copy.deepcopy(BAR))
+    if applied['bar'].get('id', 'omarchy.bar') != 'omarchy.bar':
+        raise ValueError('restore the stock bar (undo v1 first) before enabling v2')
+    entries = applied.setdefault('plugins', [])
+    entries.extend({'id': ident} for ident in IDS if not any(e['id'] == ident for e in entries))
+    if 'disabledPlugins' in applied:
+        applied['disabledPlugins'] = [e for e in applied['disabledPlugins'] if e not in IDS]
+    applied['disabledPlugins'] = [e for e in applied.get('disabledPlugins', []) if e != 'omarchy.dock'] + ['omarchy.dock']
+    osk_raw = snapshot(osk_config)
+    if osk_config.is_symlink():
+        raise ValueError('refusing to replace symlinked OSK config')
+    osk = json.loads(osk_raw['text']) if osk_raw else {}
+    if not isinstance(osk, dict):
+        raise ValueError('onscreen-keyboard.json must be an object')
+    osk.update(autoShow='always', extraRow=True)
+    extra_state = [dict(original=osk_raw, applied=dict(text=encode(osk))),
+                   dict(original=snapshot(fcitx), applied=dict(link='/dev/null'))]
+    lua_applied = lua_raw or ''
+    if phone_raw is None and 'require("hypr.phone")' not in lua_applied:
+        lua_applied += ('\n' if lua_applied and not lua_applied.endswith('\n') else '') + device_line
+    if line not in lua_applied:
+        lua_applied += ('' if not lua_applied or lua_applied.endswith('\n') else '\n') + line
+    links = [ident for ident in IDS if not os.path.lexists(plugins / ident)]
+    phone_applied, gestures = migrate_gestures(phone_raw or '')
+    if phone_raw is None:
+        phone_applied = 'dofile("/usr/share/nothing-spacewar/mobile/phone-device.lua")\n'
+    else:
+        phone_applied = phone_applied.replace(str(Path.home() / '.local/lib/hyprgrass/libhyprgrass.so'), '/usr/lib/hyprgrass/libhyprgrass.so')
+    import dock_setup
+    dock_setup.prepare(ROOT, state)
+    saved = dict(mobile_dock=True, extras=extra_state, phone_applied=phone_applied, shell=raw, lua=lua_raw, applied=applied, lua_applied=lua_applied, links=links, phone=phone_raw, gestures=gestures)
+    # Journal precedes mutations, so --undo also recovers an interrupted setup.
+    atomic(journal, encode(saved))
+    apply_saved(saved, config, extras)
+    saved['complete'] = True
+    atomic(journal, encode(saved))
+    print('Spacewar profile enabled. Reload Hyprland and rescan Omarchy plugins in the target session.')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, ValueError, KeyError) as error:
+        raise SystemExit(str(error))

@@ -1,0 +1,171 @@
+--- Dock.qml
++++ Dock.qml
+@@ -350,6 +350,7 @@
+     // The layout commands call this after changing a workspace's mode.
+     function refresh(): void { root.refresh() }
+     function apps(): void { appGrid.toggle() }
++    function snapshot(): string { return appGrid.snapshot() }
+   }
+ 
+   // An app dragged out of the app grid: the grid holds the pointer and
+@@ -381,19 +382,7 @@
+     for (var i = 0; i < windows.length; i++) windows[i].endExternalDrag()
+   }
+ 
+-  Variants {
+-    id: docks
+-    model: Quickshell.screens
+-
+-    delegate: Component {
+-      DockWindow {
+-        required property var modelData
+-
+-        screen: modelData
+-        dock: root
+-      }
+-    }
+-  }
++  Variants { id: docks; model: [] }
+ 
+   AppGrid {
+     id: appGrid
+--- AppGrid.qml
++++ AppGrid.qml
+@@ -29,27 +29,29 @@
+   property int selectedIndex: 0
+   property var apps: []
+ 
+-  readonly property int iconSize: Math.round(56 * Style.fontScale)
++  readonly property int iconSize: 64
+   readonly property int labelHeight: Math.ceil(labelMetrics.height) * 2
+   readonly property int cellGutter: Style.spacing.sm
+   readonly property int cellPadding: Style.spacing.lg
+-  readonly property int cellWidth: Math.round(iconSize * 2.2)
+-  readonly property int cellHeight: cellPadding * 2 + iconSize + Style.spacing.md + labelHeight
++  readonly property int cellWidth: Math.floor((cardWidth - inset * 2) / 4)
++  readonly property int cellHeight: 128
+   readonly property int maxColumns: 7
+   readonly property int visibleRows: 4
+-  readonly property int borderWidth: Math.max(1, Style.space(2))
++  readonly property int borderWidth: 0
+   readonly property int contentMargin: Style.spacing.panelPadding
+   readonly property int inset: contentMargin + borderWidth
+-  readonly property int headerHeight: Math.max(Style.space(36), Style.font.heading + Style.spacing.controlPaddingY * 2)
++  readonly property int headerHeight: 56
+   readonly property int headerSpacing: Style.spacing.xl
+   readonly property int screenMargin: Style.space(40)
+ 
+   // The card fits whole columns, and the grid sits centered in it so any
+   // leftover width splits evenly on both sides.
+-  readonly property int cardWidth: Math.min(panel.width - screenMargin * 2, maxColumns * cellWidth + inset * 2)
++  readonly property int cardWidth: panel.width
+   readonly property int columns: Math.max(1, Math.floor((cardWidth - inset * 2) / cellWidth))
+   readonly property int gridWidth: columns * cellWidth
+-  readonly property int cardHeight: Math.min(panel.height - screenMargin * 2, inset * 2 + headerHeight + headerSpacing + visibleRows * cellHeight)
++  readonly property int cardHeight: panel.height - 96
++
++  function snapshot() { return JSON.stringify({opened: opened, count: apps.length, contentY: grid.contentY, cellWidth: cellWidth, cellHeight: cellHeight, width: panel.width, height: panel.height}) }
+ 
+   function open() {
+     root.selectedIndex = 0
+@@ -172,7 +174,7 @@
+     WlrLayershell.namespace: "omarchy-dock-apps"
+     Rectangle {
+       anchors.fill: parent
+-      color: Commons.Color.menu.scrim
++      color: Commons.Color.menu.background
+       opacity: root.dragging ? 0 : 1
+ 
+       Behavior on opacity { NumberAnimation { duration: 150 } }
+@@ -192,9 +194,9 @@
+       width: root.cardWidth
+       height: root.cardHeight
+       anchors.centerIn: parent
+-      radius: Style.cornerRadius
++      radius: 0
+       color: Commons.Color.menu.background
+-      borderSpec: Border.surfaceSpec("menu", "border", Commons.Color.menu.border, root.borderWidth)
++      borderSpec: Border.surfaceSpec("menu", "border", Commons.Color.menu.background, 0)
+       padding: root.contentMargin
+       opacity: root.dragging ? 0 : 1
+ 
+@@ -279,19 +281,28 @@
+           radius: Style.cornerRadius
+           color: Util.alpha(Commons.Color.menu.text, 0.06)
+ 
+-          Text {
+-            anchors.left: parent.left
+-            anchors.right: parent.right
+-            anchors.leftMargin: Style.spacing.controlPaddingX
+-            anchors.rightMargin: Style.spacing.controlPaddingX
+-            anchors.verticalCenter: parent.verticalCenter
+-            textFormat: Text.PlainText
+-            text: root.filterText || Commons.I18n.t("dock.searchApps")
++          TextInput {
++            anchors.fill: parent
++            anchors.margins: 16
++            verticalAlignment: TextInput.AlignVCenter
++            text: root.filterText
+             color: Commons.Color.menu.text
+-            opacity: root.filterText ? 1 : 0.58
+             font.family: Style.font.menuFamily
+-            font.pixelSize: Style.font.heading
+-            elide: Text.ElideRight
++            font.pixelSize: 20
++            clip: true
++            selectByMouse: true
++            onTextEdited: root.setFilter(text)
++            onActiveFocusChanged: if (activeFocus) Quickshell.execDetached(["omarchy-shell", "onscreen-keyboard", "show"])
++            Text {
++              anchors.fill: parent
++              verticalAlignment: Text.AlignVCenter
++              visible: !parent.text && !parent.activeFocus
++              text: Commons.I18n.t("dock.searchApps")
++              textFormat: Text.PlainText
++              color: Commons.Color.menu.text
++              opacity: 0.58
++              font: parent.font
++            }
+           }
+         }
+ 
+@@ -364,36 +375,9 @@
+                 elide: Text.ElideRight
+               }
+ 
+-              MouseArea {
+-                anchors.fill: parent
+-                hoverEnabled: true
+-                cursorShape: Qt.PointingHandCursor
+-                acceptedButtons: Qt.LeftButton | Qt.RightButton
+-                // The grid would otherwise take a dragging press for a scroll.
+-                preventStealing: true
+-                onContainsMouseChanged: if (containsMouse && !root.dragging) root.selectedIndex = cell.index
+-                onPressed: function(event) {
+-                  cell.moved = false
+-                  cell.pressPoint = Qt.point(event.x, event.y)
+-                }
+-                onPositionChanged: function(event) {
+-                  if (!(pressedButtons & Qt.LeftButton)) return
+-                  if (!cell.moved && Math.hypot(event.x - cell.pressPoint.x, event.y - cell.pressPoint.y) > Style.space(4)) cell.moved = true
+-                  if (cell.moved) root.dragTo(cell.modelData, cell.mapToItem(panel.contentItem, event.x, event.y))
+-                }
+-                onReleased: function(event) {
+-                  if (root.dragging && event.button === Qt.LeftButton) root.dropDrag()
+-                }
+-                onCanceled: if (root.dragging) root.close()
+-                onClicked: function(event) {
+-                  if (cell.moved) return
+-                  if (event.button === Qt.RightButton) {
+-                    root.openMenu(cell.modelData, cell.mapToItem(panel.contentItem, event.x, event.y))
+-                    return
+-                  }
+-                  root.menuEntry = null
+-                  root.launch(cell.index)
+-                }
++              TapHandler {
++                acceptedButtons: Qt.LeftButton
++                onTapped: root.launch(cell.index)
+               }
+             }
+           }

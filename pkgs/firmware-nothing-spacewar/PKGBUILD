@@ -1,0 +1,21 @@
+pkgname=firmware-nothing-spacewar
+pkgver=3
+pkgrel=2
+pkgdesc='Firmware and DSP configuration for Nothing Phone (1)'
+arch=('any')
+url='https://github.com/mainlining/firmware-nothing-spacewar'
+license=('LicenseRef-proprietary')
+options=('!strip' '!debug')
+_commit=cc01a8900344afb8a8e254f7bb607d1b4affeb3c
+source=("$pkgname-$_commit.tar.gz::$url/archive/$_commit/$pkgname-$_commit.tar.gz")
+sha512sums=('b924e1e02b4718412ed7bb5712af4628b8818f31fbfbf7e10647de36b9913e100a830df1dbe49bff9912ef434c0b00012c7235207ff4b5374d3a24615d8dccb8')
+
+package() {
+  cd "$pkgname-$_commit"
+  # Arch's /lib is a symlink to /usr/lib; also retain the upstream DSP data in /usr/share.
+  cp -a --no-preserve=ownership usr "$pkgdir/"
+  install -d "$pkgdir/usr/lib"
+  cp -a --no-preserve=ownership lib/firmware "$pkgdir/usr/lib/"
+  # pmOS adds firmware/postmarketos to firmware_class.path; the kernel searches updates/ by default.
+  mv "$pkgdir/usr/lib/firmware/postmarketos" "$pkgdir/usr/lib/firmware/updates"
+}

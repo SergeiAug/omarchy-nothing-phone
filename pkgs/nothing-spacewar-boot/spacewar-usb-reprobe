@@ -1,0 +1,43 @@
+#!/bin/bash
+set -euo pipefail
+sys=${SPACEWAR_SYSFS_ROOT:-/sys}
+device=a600000.usb
+role=$sys/class/usb_role/$device-role-switch/role
+state=$sys/class/udc/$device/state
+# The controller and role switch may probe after udev-trigger; wait instead of silently skipping.
+for ((attempt=0; attempt<300; attempt++)); do
+  [[ -r $role && -r $state ]] && break
+  sleep 0.1
+done
+[[ -r $role && -r $state ]] || { echo 'spacewar-usb-reprobe: no role switch / UDC after 30 seconds' >&2; exit 0; }
+[[ $(<"$role") == device && $(<"$state") == 'not attached' ]] || exit 0
+driver=$(readlink -f "$sys/bus/platform/devices/$device/driver")
+[[ -d $driver && ${driver##*/} == dwc3-qcom ]] || {
+  echo 'spacewar-usb-reprobe: expected dwc3-qcom driver' >&2
+  exit 1
+}
+# Reprobe must precede gadget binding; never tear down another gadget silently.
+for udc in "$sys"/kernel/config/usb_gadget/*/UDC; do
+  [[ -f $udc ]] || continue
+  [[ $(<"$udc") != "$device" ]] || {
+    echo "spacewar-usb-reprobe: $udc is already bound" >&2
+    exit 1
+  }
+done
+# shellcheck disable=SC2329 # Invoked by the EXIT trap.
+restore() {
+  if [[ ! -L $sys/bus/platform/devices/$device/driver ]]; then
+    printf '%s\n' "$device" > "$driver/bind"
+  fi
+}
+trap 'restore' EXIT
+printf '%s\n' "$device" > "$driver/unbind"
+printf '%s\n' "$device" > "$driver/bind"
+for ((attempt=0; attempt<100; attempt++)); do
+  if [[ -r $state && -r $role ]] && [[ $(<"$role") == device ]]; then
+    exit 0
+  fi
+  sleep 0.1
+done
+echo 'spacewar-usb-reprobe: device role / UDC did not return within 10 seconds' >&2
+exit 1

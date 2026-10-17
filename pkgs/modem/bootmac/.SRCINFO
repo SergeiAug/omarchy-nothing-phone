@@ -1,0 +1,15 @@
+pkgbase = bootmac
+	pkgdesc = Configure MAC addresses of Bluetooth and Wi-Fi interfaces at boot from the device serial number
+	pkgver = 0.7.1
+	pkgrel = 1
+	url = https://gitlab.postmarketos.org/postmarketOS/bootmac
+	arch = any
+	license = GPL-3.0-or-later
+	makedepends = git
+	makedepends = meson
+	depends = bluez-utils
+	depends = iproute2
+	source = git+https://gitlab.postmarketos.org/postmarketOS/bootmac.git#tag=v0.7.1
+	sha256sums = SKIP
+
+pkgname = bootmac

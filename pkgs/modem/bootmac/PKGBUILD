@@ -1,0 +1,24 @@
+# Maintainer: user
+# pmOS soc-qcom depends on bootmac; without it the WCN6750 Bluetooth controller stays
+# "unconfigured" (missing public-address) and bluez shows no controller.
+pkgname=bootmac
+pkgver=0.7.1
+pkgrel=1
+pkgdesc='Configure MAC addresses of Bluetooth and Wi-Fi interfaces at boot from the device serial number'
+arch=('any')
+url='https://gitlab.postmarketos.org/postmarketOS/bootmac'
+license=('GPL-3.0-or-later')
+depends=('bluez-utils' 'iproute2')
+makedepends=('git' 'meson')
+source=("git+$url.git#tag=v$pkgver")
+sha256sums=('SKIP')
+
+build() {
+  arch-meson "$pkgname" build -Dsystemd_units=true
+  meson compile -C build
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+  install -Dm644 "$pkgname/LICENSE" -t "$pkgdir/usr/share/licenses/$pkgname/"
+}

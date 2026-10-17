@@ -1,0 +1,14 @@
+pkgbase = rmtfs
+	pkgdesc = Qualcomm Remote Filesystem Service Implementation
+	pkgver = 1.3
+	pkgrel = 1
+	url = https://github.com/linux-msm/rmtfs
+	arch = aarch64
+	arch = x86_64
+	license = BSD-3-Clause
+	depends = qrtr
+	depends = libudev.so
+	source = rmtfs-v1.3.tar.gz::https://github.com/linux-msm/rmtfs/archive/refs/tags/v1.3.tar.gz
+	sha256sums = 4b6c398806a1046e2256a685d592833de0f37b7245b8adc4797e1791f0e117ee
+
+pkgname = rmtfs

@@ -1,0 +1,32 @@
+# Maintainer: user
+# Alpine modem/81voltd 1.2.0, plus the two commits on top of that tag in the
+# pinned tree (qvd-server qrtr decode errors, README). No AUR package.
+pkgname=81voltd
+pkgver=1.2.0.r2.ga7794dd
+pkgrel=2
+_commit=a7794dd6c8ac216a97dc5a931edab2dfc46eca2a
+pkgdesc='Server-side implementation of IMS Data service on QMI/QRTR'
+arch=('aarch64' 'x86_64')
+url='https://gitlab.postmarketos.org/modem/81voltd'
+license=('GPL-2.0-or-later')
+depends=('qrtr' 'libqmi' 'modemmanager')
+makedepends=('meson')
+source=("$pkgname-$_commit.tar.gz::$url/-/archive/$_commit/$pkgname-$_commit.tar.gz")
+sha256sums=('abd12b986fbbb9a9bf7e17c0485cdb261330f330fcad95f0dc4eeb701d060dad')
+
+build() {
+  arch-meson "$pkgname-$_commit" build
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+  # Upstream always installs an OpenRC script; Arch uses the systemd unit.
+  rm -r "$pkgdir/etc/init.d"
+  rmdir --ignore-fail-on-non-empty "$pkgdir/etc"
+  install -Dm644 "$pkgname-$_commit/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

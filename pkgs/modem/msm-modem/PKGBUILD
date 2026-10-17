@@ -1,0 +1,35 @@
+# Maintainer: user
+# Alpine device/msm-modem 13, plus the maintainer-only commit on that tag.
+# soc-qcom-modem depends on msm-modem and msm-modem-uim-selection only.
+# wwan-port is for older bam-dmux SoCs; downstream udev is for downstream kernels.
+pkgname=msm-modem
+pkgver=13.r1.g5f504e0
+pkgrel=1
+_commit=5f504e0677f40dec93018d53a9b71aa1931db238
+pkgdesc='Common support for Qualcomm MSM modems (UIM slot selection)'
+arch=('aarch64' 'x86_64')
+url='https://gitlab.postmarketos.org/postmarketOS/msm-modem'
+license=('GPL-3.0-or-later')
+depends=('libqmi' 'rmtfs')
+makedepends=('meson')
+source=("$pkgname-$_commit.tar.gz::$url/-/archive/$_commit/$pkgname-$_commit.tar.gz")
+sha256sums=('f6a3d49c85fcaeab939aee57e666a0f6ba4b2061c4fe8d0a29206c986ebd2377')
+
+build() {
+  arch-meson "$pkgname-$_commit" build \
+    -Dopenrc=false \
+    -Dsystemd=true \
+    -Duim-selection=true \
+    -Dwwan-port=false \
+    -Ddownstream=false
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+  install -Dm644 "$pkgname-$_commit/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

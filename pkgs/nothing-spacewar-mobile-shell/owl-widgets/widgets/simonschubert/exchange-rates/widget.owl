@@ -1,0 +1,36 @@
+widget "exchange rates" {
+  meta { description: "Daily exchange rates from the European Central Bank with a 30-day trend, for the currencies in ~/.config/omarchy-proot/exchange-rates"; version: "1.1"; license: "MIT"; category: "world" }
+  size: 6x2
+  minSize: 3x2
+
+  requires { pacman: ["curl", "jq"] }
+
+  // The first line is the base currency, the lines after are what it's quoted in.
+  source fx = cmd("""
+    f=~/.config/omarchy-proot/exchange-rates
+    mkdir -p "${f%/*}"
+    [ -f "$f" ] || printf 'USD\nEUR\nGBP\nJPY\n' > "$f"
+    codes=$(grep -v '^#' "$f" | grep . | tr a-z A-Z)
+    base=$(head -n1 <<< "$codes")
+    to=$(tail -n +2 <<< "$codes" | paste -sd, -)
+    curl -fsLm 10 "https://api.frankfurter.dev/v1/$(date -d '30 days ago' +%F)..?base=$base&symbols=$to" | jq -c --arg to "$to" '
+      (.rates | to_entries | sort_by(.key) | map(.value)) as $days | $days[-1] as $now | $days[-2] as $prev |
+      {base, rates: [$to | split(",")[] | select($now[.]) | {code: ., rate: $now[.], change: (($now[.] / $prev[.] - 1) * 100), hist: [$days[][.]]}]}'
+  """) every 1h json timeout 15s
+
+  onTap: terminal('$EDITOR ~/.config/omarchy-proot/exchange-rates', "exchange rates")
+
+  Row {
+    gap: 12
+    for c in fx.rates key c.code {
+      Column {
+        weight: 1
+        gap: 0
+        Text { text: "${fx.base} → ${c.code}"; style: label; maxLines: 1 }
+        Text { text: c.rate >= 100 ? fixed(c.rate, 1) : c.rate >= 10 ? fixed(c.rate, 2) : fixed(c.rate, 4); style: title; maxLines: 1 }
+        Text { text: "${c.change >= 0 ? "+" : ""}${fixed(c.change, 2)}%"; style: small; color: c.change >= 0 ? green : red }
+        Sparkline { values: c.hist; min: min(c.hist); max: max(c.hist); color: accent; fill: width; weight: 1 }
+      }
+    }
+  }
+}

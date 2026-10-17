@@ -1,0 +1,24 @@
+pkgbase = hyprgrass
+	pkgdesc = Touch gestures pinned for Hyprland 0.56.2
+	pkgver = 0.8.2.r1.g8e605468
+	pkgrel = 1
+	url = https://github.com/horriblename/hyprgrass
+	arch = aarch64
+	license = BSD-3-Clause
+	makedepends = git
+	makedepends = meson
+	makedepends = cmake
+	makedepends = glm
+	depends = hyprland=0.56.2
+	depends = libinput
+	depends = pixman
+	depends = libdrm
+	depends = libxkbcommon
+	depends = wayland
+	depends = lua
+	source = git+https://github.com/horriblename/hyprgrass#commit=8e605468cbf429791d61ddbfaeb14ff5e08fec3e
+	source = git+https://github.com/WayfireWM/wf-touch#commit=8974eb0f6a65464b63dd03b842795cb441fb6403
+	sha256sums = SKIP
+	sha256sums = SKIP
+
+pkgname = hyprgrass

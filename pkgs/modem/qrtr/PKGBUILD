@@ -1,0 +1,25 @@
+# Maintainer: user
+# Based on AUR qrtr 1.2-1 (https://aur.archlinux.org/packages/qrtr).
+# v1.2 still builds userspace qrtr-ns (src/ns.c). This commit drops it
+# (3edda0ebe, "ns: Drop qrtr-ns"); the nameserver is in the kernel.
+pkgname=qrtr
+pkgver=1.2.r18.g29e36ae
+pkgrel=1
+_commit=29e36ae164389580a0f8ea7a7fdb728140ae978d
+pkgdesc='Userspace reference for net/qrtr in the Linux kernel'
+arch=('aarch64' 'x86_64')
+url='https://github.com/linux-msm/qrtr'
+license=('BSD-3-Clause')
+makedepends=('meson')
+source=("$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz")
+sha256sums=('66f846c447a0a0302e7dd9b5450c38945081100b04697bb9eb39994c45ddae4e')
+
+build() {
+  arch-meson "$pkgname-$_commit" build
+  meson compile -C build
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+  install -Dm644 "$pkgname-$_commit/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

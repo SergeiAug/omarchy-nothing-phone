@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "spacewar.switcher",
+  "name": "Spacewar switcher",
+  "version": "0.2.0",
+  "author": "Spacewar contributors; based on Derek Ross / Omarchy Mobile",
+  "license": "MIT",
+  "kinds": [
+    "panel"
+  ],
+  "entryPoints": {
+    "panel": "Switcher.qml"
+  },
+  "keepLoaded": true
+}

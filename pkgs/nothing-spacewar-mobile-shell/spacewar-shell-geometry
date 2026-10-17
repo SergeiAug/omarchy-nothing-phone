@@ -1,0 +1,33 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: MIT
+import json
+import subprocess
+
+
+def query(argv):
+    return json.loads(subprocess.check_output(argv, text=True, timeout=1, stderr=subprocess.DEVNULL))
+
+
+def geometry(status, layers):
+    if not isinstance(status, dict) or not isinstance(status.get('shown'), bool):
+        raise ValueError('invalid OSK status')
+    shown = status['shown']
+    top = 0
+    if shown:
+        surfaces = [surface for monitor in layers.values() for group in monitor.get('levels', {}).values()
+                    for surface in group if surface.get('namespace') == 'omarchy-onscreen-keyboard']
+        if not surfaces:
+            raise ValueError('OSK shown without geometry')
+        top = min(float(surface['y']) for surface in surfaces)
+    return dict(ready=True, shown=shown, top=top, monitor='DSI-1')
+
+
+if __name__ == '__main__':
+    try:
+        result = geometry(query(['omarchy-shell', 'onscreen-keyboard', 'status']),
+                                  query(['hyprctl', '-j', 'layers']))
+        result['focus'] = query(['hyprctl', '-j', 'activewindow'])
+        result['occupied'] = int(query(['hyprctl', '-j', 'activeworkspace']).get('windows', 0)) > 0
+        print(json.dumps(result))
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
+        print('{"ready":false,"shown":true,"top":0}')

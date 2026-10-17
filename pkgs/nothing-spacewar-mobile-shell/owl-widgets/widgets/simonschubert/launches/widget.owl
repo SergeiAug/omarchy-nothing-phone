@@ -1,0 +1,47 @@
+widget "launches" {
+  meta { description: "A live countdown to the next rocket launch and the ones after it, from The Space Devs"; version: "1.1"; license: "MIT"; category: "world" }
+  size: 6x3
+  minSize: 3x2
+
+  requires { pacman: ["curl", "jq"] }
+
+  // The free Launch Library API allows 15 requests an hour, so this checks hourly.
+  source launches = cmd("""
+    curl -fsm 12 'https://ll.thespacedevs.com/2.2.0/launch/upcoming/?limit=8&mode=list' | jq -c '[.results[] | {
+      id, name, provider: .lsp_name, where: .location, status: .status.abbrev,
+      at: (.net | fromdateiso8601), url: "https://spacelaunchnow.me/launch/\(.slug)"
+    }]'
+  """) every 1h json timeout 20s
+  source now = clock every 1s
+  let upcoming = launches.filter(l => l.at > now - 3600)
+  let next = upcoming.first()
+  let t = next.at - now
+
+  onTap: url(next.url ?? "https://spacelaunchnow.me")
+
+  Column {
+    gap: 4
+    Row {
+      Text { text: "next launch"; style: muted; weight: 1 }
+      Text { text: next.status; fontSize: 11; color: next.status == "Go" ? green : muted; width: 48; align: end }
+    }
+    Text { text: next.name; style: body; bold: true; maxLines: 1 }
+    Text {
+      text: next == null ? "…" : t <= 0 ? "liftoff" : "T-${t >= 86400 ? "${floor(t / 86400)}d " : ""}${pad(floor(t % 86400 / 3600), 2, "0")}:${pad(floor(t % 3600 / 60), 2, "0")}:${pad(floor(t % 60), 2, "0")}"
+      style: title; font: mono; color: accent
+    }
+    Text { text: "${next.provider} · ${next.where}"; style: small; color: muted; maxLines: 1 }
+    Column {
+      scroll: true
+      weight: 1
+      gap: 2
+      for l in upcoming.drop(1) key l.id {
+        Row {
+          onTap: url(l.url)
+          Text { text: fmtTime(l.at, "EEE d MMM"); fontSize: 11; color: muted; width: 80 }
+          Text { text: l.name; fontSize: 11; maxLines: 1; weight: 1 }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+pkgbase = omarchy-osk-spacewar
+	pkgdesc = Omarchy on-screen keyboard with Russian layout and switchLanguage IPC
+	pkgver = 0.3.4.r4.gba346b0
+	pkgrel = 1
+	url = https://github.com/yeutterg/omarchy-on-screen-keyboard
+	arch = any
+	license = MIT
+	checkdepends = nodejs
+	depends = omarchy-dev
+	depends = quickshell
+	depends = python-pywayland
+	depends = python-gobject
+	depends = libxkbcommon
+	source = omarchy-osk-ba346b0.tar.gz
+	sha256sums = 7227f51153cbbca32cbe69fb371e3c8dd1c25e9f2a2efdab5f8f344c2f9fb77b
+
+pkgname = omarchy-osk-spacewar

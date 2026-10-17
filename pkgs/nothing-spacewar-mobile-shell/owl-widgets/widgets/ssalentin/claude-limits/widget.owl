@@ -1,0 +1,58 @@
+widget "claude limits" {
+  size: 6x3
+  minSize: 3x2
+
+  meta { owl: 4; description: "Claude Code usage limits: 5-hour session and weekly, with reset times. Uses Claude Code's login on this device"; version: "1.0"; license: "MIT"; category: "dev" }
+  requires { pacman: ["jq", "curl"] }
+
+  source now = clock every 30s
+
+  // Same numbers as /usage in Claude Code, from Anthropic's usage endpoint with the
+  // login Claude Code already keeps in ~/.claude/.credentials.json (Claude Code refreshes it).
+  source u = cmd("""
+    t=$(jq -r '.claudeAiOauth.accessToken // empty' ~/.claude/.credentials.json 2>/dev/null)
+    [ -n "$t" ] || { echo '{"error":"not logged in"}'; exit 0; }
+    r=$(printf 'Authorization: Bearer %s\n' "$t" |
+      curl -s -m 15 -w '\n%{http_code}' -H @- -H 'anthropic-beta: oauth-2025-04-20' https://api.anthropic.com/api/oauth/usage)
+    case $(printf %s "$r" | tail -n 1) in
+      200) printf %s "$r" | sed '$d' |
+        jq -c '{limits: [.limits[] | {
+          label: (if .kind == "session" then "5h session" elif .kind == "weekly_all" then "week" else "week \(.scope.model.display_name // "")" end),
+          pct: .percent,
+          resets: (if .resets_at then .resets_at | sub("\\.[0-9]+"; "") | sub("\\+00:00$"; "Z") | fromdateiso8601 else null end)}]}' ||
+        echo '{"error":"usage unavailable"}' ;;
+      401) echo '{"error":"login expired: open Claude Code"}' ;;
+      *) echo '{"error":"usage unavailable"}' ;;
+    esac
+  """) every 5m json timeout 30s
+
+  let limits = u.limits ?? []
+
+  component Limit(label, pct, resets) {
+    Column {
+      gap: 2
+      Row {
+        gap: 6
+        Text { text: label; style: label; weight: 1 }
+        Text { text: "${pct}%"; fontSize: 14; width: 44; align: end; color: pct >= 90 ? red : pct >= 70 ? yellow : foreground }
+      }
+      Progress { value: pct; color: pct >= 90 ? red : pct >= 70 ? yellow : accent; animate value: spring() }
+      if resets != null {
+        Text { text: resets > now ? "resets in ${fmtDuration(resets - now)}" : "reset"; fontSize: 11; color: muted }
+      }
+    }
+  }
+
+  onTap: refresh()
+
+  Column {
+    gap: 8
+    Text { text: "claude code limits"; style: muted }
+    if u.error != null {
+      Text { text: u.error; color: red }
+    }
+    for l in limits key l.label {
+      Limit { label: l.label; pct: l.pct; resets: l.resets }
+    }
+  }
+}

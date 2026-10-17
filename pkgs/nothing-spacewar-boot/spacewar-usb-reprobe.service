@@ -1,0 +1,9 @@
+[Unit]
+Description=Reprobe Spacewar DWC3 controller before USB gadget binding
+Before=spacewar-usb-gadget.service
+After=systemd-udev-trigger.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/spacewar-usb-reprobe
+TimeoutStartSec=60

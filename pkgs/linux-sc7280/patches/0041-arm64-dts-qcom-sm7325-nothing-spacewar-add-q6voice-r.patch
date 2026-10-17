@@ -1,0 +1,50 @@
+From 275a8467dcde0a836a3b54d1cbec52e6b9959ed4 Mon Sep 17 00:00:00 2001
+From: Sergey Ok <zdepat@gmail.com>
+Date: Sat, 17 Oct 2026 05:45:23 +0300
+Subject: [PATCH] arm64: dts: qcom: sm7325-nothing-spacewar: add q6voice
+ related nodes
+
+Use the VoiceMMode1 frontend as on Motorola Edge 30 and Fairphone 5. The q6voice services and binding include are already enabled by the Spacewar series.
+
+Replace the CS-Voice frontend: its capture mixer does not provide the TX_CODEC_DMA_TX_3 route used by the WCD9385 microphones. VoiceMMode1 supports that capture port and the PRIMARY_MI2S_RX playback port feeding both TFA9873 amplifiers.
+---
+ .../boot/dts/qcom/sm7325-nothing-spacewar.dts   | 17 +++++++++--------
+ 1 file changed, 9 insertions(+), 8 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/qcom/sm7325-nothing-spacewar.dts b/arch/arm64/boot/dts/qcom/sm7325-nothing-spacewar.dts
+index 91ebb2c83..0065be9d5 100644
+--- a/arch/arm64/boot/dts/qcom/sm7325-nothing-spacewar.dts
++++ b/arch/arm64/boot/dts/qcom/sm7325-nothing-spacewar.dts
+@@ -1488,6 +1488,12 @@ dai@2 {
+ 	};
+ };
+ 
++&q6voicedai {
++	dai@1 {
++		reg = <VOICEMMODE1>;
++	};
++};
++
+ &qfprom {
+ 	vcc-supply = <&vdd_qfprom>;
+ };
+@@ -1589,16 +1595,11 @@ cpu {
+ 		};
+ 	};
+ 
+-	/*
+-	 * Hostless front-end for CS voice calls: opening this PCM brings up the
+-	 * q6voice DSP session (MVM/CVS/CVP) that bridges the modem vocoder to the
+-	 * AFE ports. No samples cross the CPU, so there is no codec here.
+-	 */
+-	cs-voice-dai-link {
+-		link-name = "CS-Voice";
++	voicemmode1-dai-link {
++		link-name = "VoiceMMode1";
+ 
+ 		cpu {
+-			sound-dai = <&q6voicedai CS_VOICE>;
++			sound-dai = <&q6voicedai VOICEMMODE1>;
+ 		};
+ 	};
+ 

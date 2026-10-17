@@ -1,0 +1,44 @@
+# SPDX-License-Identifier: MIT
+pkgname=nothing-spacewar-mobile-shell
+pkgver=0.3.3
+pkgrel=1
+pkgdesc='Spacewar mobile plugins for the stock Omarchy shell'
+arch=(any)
+url='https://github.com/derekross/omarchy-mobile'
+license=(MIT)
+depends=(omarchy quickshell python python-dbus python-gobject omarchy-osk-spacewar qt6-declarative inotify-tools)
+checkdepends=(nodejs)
+conflicts=(nothing-spacewar-mobile-ui)
+install=mobile-shell.install
+
+check() {
+  python "$startdir/tests/bt-agent.py"
+  node "$startdir/tests/motion.cjs"
+  node "$startdir/tests/fix1.cjs"
+  node "$startdir/tests/fix2.cjs"
+  node "$startdir/tests/fix3.cjs"
+  node "$startdir/tests/widgets.cjs"
+  python -m unittest discover -s "$startdir/tests" -p 'test_*.py'
+}
+
+package() {
+  install -Dm644 "$startdir/90-spacewar-torch.rules" "$pkgdir/usr/lib/udev/rules.d/90-spacewar-torch.rules"
+  local root="$pkgdir/usr/share/nothing-spacewar/mobile-shell"
+  install -d "$root/plugins" "$pkgdir/usr/bin"
+  cp -r "$startdir/plugins/." "$root/plugins/"
+  install -m644 "$startdir/phone-device.lua" "$root/"
+  cp -r "$startdir/owl-widgets" "$root/"
+  install -m644 "$startdir/widgets/WIDGETS.md" "$startdir/widgets/OWL.md" "$startdir/widgets/LICENSE-owl-guide" "$root/"
+  cp -r "$startdir/widgets/examples" "$root/widget-examples"
+  cp -r "$startdir/widgets/template" "$root/widget-template"
+  for script in "$startdir"/bin/*; do
+    [[ -f $script ]] || continue
+    install -m755 "$script" "$pkgdir/usr/bin/${script##*/}"
+  done
+  for script in spacewar-shell-setup spacewar-shell-geometry spacewar-shell-back; do
+    install -m755 "$startdir/$script" "$pkgdir/usr/bin/$script"
+  done
+  for license in "$startdir"/LICENSE.*; do
+    install -Dm644 "$license" "$pkgdir/usr/share/licenses/$pkgname/${license##*/}"
+  done
+}

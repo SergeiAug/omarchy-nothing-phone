@@ -1,0 +1,169 @@
+pkgbase=linux-sc7280
+pkgname=(linux-sc7280 linux-sc7280-headers)
+pkgver=7.2.9.r7.gb90de19
+pkgrel=2
+pkgdesc='Mainline SC7280/SM7325 kernel for Nothing Phone (1)'
+arch=('aarch64')
+url='https://github.com/sc7280-mainline/linux'
+license=('GPL-2.0-only')
+makedepends=('patch' 'bc' 'bison' 'flex' 'openssl' 'libelf' 'pahole' 'python' 'kmod' 'cpio' 'gettext')
+options=('!strip' '!debug')
+_commit=b90de19446e8bdaf222380b5a1d230c006d2912a
+_tree="linux-${_commit}"
+_patches=(
+  '0001-arm64-dts-qcom-sm7325-nothing-spacewar-enable-WCD938.patch'
+  '0002-FROMLIST-arm64-dts-qcom-sm7325-nothing-spacewar-Add-.patch'
+  '0003-FROMLIST-drivers-media-i2c-s5kjn1-Add-support-for-19.patch'
+  '0004-FROMLIST-RFT-dt-bindings-media-i2c-dw9719-Document-D.patch'
+  '0005-FROMLIST-RFT-media-i2c-dw9719-Add-DW9800W-support.patch'
+  '0006-FROMLIST-RFT-arm64-dts-qcom-sm7325-nothing-spacewar-.patch'
+  '0007-arm64-dts-qcom-sm7325-nothing-spacewar-give-each-TFA.patch'
+  '0008-Bluetooth-hci_qca-SCO-offload-changes-from-surya-r93.patch'
+  '0009-slimbus-qcom-ngd-ctrl-stream-channel-removal-and-rob.patch'
+  '0010-arm64-dts-qcom-sm7325-nothing-spacewar-wire-up-q6voi.patch'
+  '0011-ASoC-codecs-tfa9872-add-an-output-switch-to-power-do.patch'
+  '0012-slimbus-no-aplazar-el-sondeo-si-el-dispositivo-aun-n.patch'
+  '0013-ASoC-codecs-add-the-WCN399x-Bluetooth-SLIMBus-audio-.patch'
+  '0014-ASoC-wcn-bt-slim-stop-pinning-the-SLIMBus-controller.patch'
+  '0015-ASoC-codecs-wcn-bt-slim-add-the-WCN6750-product-0x22.patch'
+  '0016-Bluetooth-hci_qca-allow-the-SLIMbus-HFP-offload-on-W.patch'
+  '0017-ASoC-codecs-tfa9872-expose-the-amplifier-gain-as-a-v.patch'
+  '0018-arm64-dts-qcom-sm7325-nothing-spacewar-map-the-WCD93.patch'
+  '0019-ASoC-codecs-wcn-bt-slim-fix-the-module-device-table-.patch'
+  '0020-ASoC-codecs-tfa9872-expose-the-total-TDM-speaker-gai.patch'
+  '0021-misc-fastrpc-give-remote-heap-memory-back-to-HLOS-be.patch'
+  '0022-firmware-qcom-scm-register-the-Gunyah-watchdog-on-th.patch'
+  '0023-slimbus-qcom-ngd-ctrl-remove-a-stream-s-channels-by-.patch'
+  '0024-ASoC-codecs-wcn-bt-slim-select-channel-bit-0-for-the.patch'
+  '0025-ASoC-codecs-wcn-bt-slim-hold-the-SLIMBus-controller-.patch'
+  '0026-ASoC-codecs-wcn-bt-slim-do-not-hold-the-bus-while-Bl.patch'
+  '0027-ASoC-codecs-wcn-bt-slim-look-for-the-chip-when-a-str.patch'
+  '0028-ASoC-codecs-wcn-bt-slim-keep-the-stream-startup-look.patch'
+  '0029-input-misc-add-the-Qualcomm-SPMI-PMIC-haptics-driver.patch'
+  '0030-arm64-dts-qcom-sm7325-nothing-spacewar-describe-the-.patch'
+  '0031-input-qcom-spmi-haptics-play-FF_RUMBLE-at-full-scale.patch'
+  '0032-arm64-dts-qcom-sm7325-nothing-spacewar-S5KJN1-link-f.patch'
+  '0033-WIP-media-i2c-add-a-Sony-IMX766-sensor-driver.patch'
+  '0034-WIP-arm64-dts-qcom-sm7325-nothing-spacewar-describe-.patch'
+  '0035-media-i2c-imx471-the-sensor-reads-out-RGGB.patch'
+  '0036-arm64-dts-qcom-sm7325-nothing-spacewar-describe-the-.patch'
+  '0037-power-supply-qcom_battmgr-expose-the-notification-re.patch'
+  '0038-crypto-qce-Add-runtime-PM-and-interconnect-bandwidth.patch'
+  '0039-leds-add-the-Awinic-AW21018-glyph-LED-driver.patch'
+  '0040-arm64-dts-qcom-sm7325-nothing-spacewar-describe-the-.patch'
+  '0041-arm64-dts-qcom-sm7325-nothing-spacewar-add-q6voice-r.patch'
+)
+# makepkg resolves plain local sources by basename; file URLs preserve patches/.
+source=("linux-${_commit}.tar.gz::https://github.com/sc7280-mainline/linux/archive/${_commit}.tar.gz"
+        'config-postmarketos-qcom-sc7280.aarch64'
+        'linux-sc7280.preset'
+        "${_patches[@]/#/file://$startdir/patches/}")
+sha512sums=('8d776cb0802645cddd0f4d912faa3ddd1f3d36d67c40b876dcc5efa391f447b6d227ad4f2fa41343fd8ff25884efc2f3381b3e90220b941c209e4797b13ceb45'
+            '1d164300debcd8d7b21f9aa48c751b40485dd7a25a3bf046abb34c6eb69b4e56490e4dd8d703e78be1aec6100e1d57eb8540a0485bee6ae54023049b20a2a588'
+            '228618eff73df834f9cd133ccc6f722c5e2513129e8ef8b2fd1fb435b4df93d47a6fc3cf1680345ccc05548ec571d51a010bf3b2b0b99c87852a6ba95a0b02cc'
+            '56f0a113ca9eaf8d50ad3acc57e1347f41aec555e13391fe45d6726b527e7d6946006380918cf518c6dbde71610eaa73b6a5bd36495306e64a75ec075eedefac'
+            '55a61ddffd486a4cf446f52504f6eb3906cfa07d608ed9525dee23f4065a4dbd0bb0952649a3c21306a37b965c81b0b91312e0867aad11641a7220c3b30afa0d'
+            'ffffb6b94da9e24ee39c4da344532451311abb1c495f93dd8060478539072daeeb625372ec26d5f9a75e870978236241c6e28ba66200f3b9c32c1930cc9782eb'
+            'e5abd550731ab7ab865c56246b919a8e9efccaf4b723b3735e241c5e27726657fc8beb320a3af629bde2e724d0af42f6610bd5a4eb51ec79c832431c73441bf4'
+            '47e040facc7cf86899657f6dcfae4cffeb145009be71c71d8df9e7c673cc5c98e362f1144c520cced881fdffe7f5b6c9ffc516dedcb425a0d21ca809b406e66c'
+            '1a01a0dfa514a45344743eaa89734c77536cec86fbb34f21b289b49e7f7a5345158042028c14ad634e3eb7cd0d331ea2e7e5a3d51e745840f54352022f1d3957'
+            'e181940c44a7224d31313668e89cb9d9dcfc07517f6582f8d6008379d9332e6aa4e6c6f328f0f077ea0e268bf94d8e81b572bc922446caf6b81a1a08f883d499'
+            '5aa98427dd230f4e5dfc7cbc1b2522177154818ebedc70ae5ade85698c27c8b1303af58b04d636da9316a6bb5b1d45c6d5254a6bf17e58d26fc894e2aa03905d'
+            'a2076088d893b4f6f131a4fbfa3080e446f06b269ab2bf7cec8132921e9699370726b19a9242b1a18869545b44433e1b1c71135536a294dbaaa4d2f9d5728f25'
+            '99dfec5f33401c250c3e484b288fcd4043e31f0967773c8744465863b80eed7fb95874fa94e9a3b36e0e689c78454ea75891ade447f52daf1037eedc6f9bc234'
+            '650f1ece00c1b0a35aaf0befa53ef54f57c2f929fa88d54969f374dcc87a084d2b9ac866b8ad9f2e4c367e84913e416af9cb420a677d6dc91295b2ccacaa7a11'
+            '3b334fb72a0707e3c93bacbcb993aa4b04946a9ea92ab62ed3c937ee8d5afecfb88ed88d82e15d558987aaac1bc10e84081a7fb6b3cc85b286cbc63f91bf1320'
+            '972bdb8e80904435ac7a1fca478493b8679454698bb944fdd6efc3663103a8bbe667e6f5dc68f48fe9c1464e81e7b357ac6ee34e2b677a5873ce0589df6e3ebc'
+            '854d544948396476927622676dc1430dd89d91c88644920a1ba0dc1a91d751a22b0cdcc29aa055edc7955e1913af8d1c8be5ce98872e2131e28518deefb7a439'
+            '685e3563762a3a0b4dcad75c238fbe0aa96792d7ecd07b3bb1aefb5f9c88fd2538ff6cb560737ee681354b14f5ead2b39b023ae32a9ede29bbc09b50b51c747a'
+            '5a91f75119d6474fa2956ca65ba3f4c5d17c2478620e403375ce11af67581d39cbfa5abde8c7a5de38e7ff5a07bad1285d25a0a0e1589c86e1a1ef912694f587'
+            '254e628efbe95353d0eef68dcdad7abe7ceead2c51c77380b42c59714d266d0c70ce66e6cec901fd866e3daa794f76fa596d0faa21c68efbcde753aedb4051ba'
+            'd7e09c615ab78fab8cb92713871469e6e39a835c72a905e8fa5acae0fd095a35b24923c3ec45ccf7535cfee16d73422147835eb8c68b05772d214f29e8470ff7'
+            'ad48aca1bc1b0357cb272a4736f2c594c7c793d09076cb1a0d38d589c5b9ae39c83081da7ef46861d85c1f456cfd7f8dfe0bc1dfa289645f2444515b00fd51e8'
+            'fc9c104ffcf75a43b60e2d252ce6a4be160328b49e504286bd7c461f5fac88425b5b47ba1e5cd0b4dfd94732cccf52dec22aa1ef19258f49f310a8dde92317e3'
+            '68c08c3312773f8f7827098cf29942a7369f7d150145d587efeff71fcfe0706fba950e59f4dc5c307dbbfee1f0a32c2611f6186644ef4a513b918b321c15518c'
+            'c06f662792fa79d59d0cb427d08e86c989c3fe5dc02e569b3aa718d9c3aebee141b8beb3288f10ca85071c87843afdc8f7070f08ae1222b2c540d7a94aa9f989'
+            '8be0a9234065980772eebfd85f4808878a17b9ee0f47fa0243df34071babde439235fe80d8f3420346e299af59456042fce9c5df53b1b0aa7afe82843698909a'
+            'c4c8e8a656a7eeaf8dcf406be3fdd7fd9ce3295ed02c9d86203c64696f70b502a76e2029e00ca5bdc7284148e3adb068f97ccecd58cf39106c606b9e4fb15670'
+            'f8229c480f4dae4a7441c937adc42d398c9add3d2b63f142423b63bc9b256f7650cbbb9f186e78904ce269c3a4cfd191aedfb179971337b84bacc58c652f9e27'
+            '12c1294048dfa8f2be164baaa9c50f60d32c1b36e2ff993b609ad8df61782d5c35dfd64344b85f29ba87a5813943cb95bcf0bb414ee3e4ce619c80bba500a2a2'
+            '5ce655381e09fd2da205d4becc700e858ef9f40a174e7274cf65eaab885894ee53048efe979ff810b468a5b7b95a7822d720fbe2333aa5440977d89f1f99b768'
+            '9614f365febd0cc654026553c1ea7449a6d02dc36f4d5c1f224d9b977f6365fd2392f08ff6a8b7565e21d277fd066b2502f551ecc074664ef5f9424e8648a893'
+            'c65a5cc52ccebf05690a01cac1fed897aa2c1ef47ebddff123b1f16327895efbe1cc73ea2be3ac072987c5a08d1386d02ef31085a0c7864627d8e3690c7aa261'
+            '536cf87b4470bd99fbc42a38150ef78ec9dd61d30c2fd6971cc1bec419e80ee235b8b0d99944dd2cd635d463f2676738a480abb75cfb18c08dba9213ebc8f9a7'
+            '721f478a787ec855cc7295872077424298e1accac75844d7f21e55ff13f4f18e2073902372cfc2d5ae1ec33826f73dca3f5dcf0060c36b2476bf72410bb02fd4'
+            'fec8d0e24d005536df6ad8589b2c408d16f23af4b83a54ed9e792c27773247d4d77eb7230100b26092e0ce04ccf6780925b3acbd534dc108be83bfd755a3fdb8'
+            'c71b4bfb11c96db49d5fecb73b5d1fe8c9cc626191a42fa688b30ff9333660e7796acec7f61b6956e9d98b1cb4b442fb17f2b5b460936a1d21bf82cb8bcac904'
+            '3f6e04a90a1f2c0aed27433a229fac7d633aabb105a846b44c40bbbf1a6dfefccb6f9f03e12aff111cd0ee9c47b35b628a0682204a2cb49db72f96f41d889fde'
+            'f5ef2d3388282911be6a59e8f8894b3b5fbb6dad45e9819ae2f510ce57936ca36b3589b666196261f18f1b10586a3cf6a066705841b2fea3e10200a48564b1d1'
+            'bc0165e87c58f531319365291cb1c3ee1aab0d69a46302ed20fb3107f62268af9be12db2ef7f515062075f8cfcbc93465c5608bb08e61e697bb3b43defe98520'
+            '73614521ed25efd86d316ce8bca7ef49ece4d7f4671b8e11eafa628eebdc436d1d3edb6e7ca165df1803ef0a7dc2a5c74b4bb24a49e79ff60f6c7a35bbc48d32'
+            '5bb431e02ecf6b39daab58527a3f62ef78839176337ba0f58a57e404e9fca2c208c4ed6171615b2d4a31e5e47112fdf0947be1ffcb575f3c73c7a834e7a4ff25'
+            '70dca3896ded39961e59fc9756f0e907982aed6a1165127eda452b3562647c0c24605b5e08c827516a6c4f433b7233bcf0493829b51e4eb3714399ff6b9272a9'
+            '48e4b0187421432cd13dbe6e6fef7eae5331457ce2dac87e9e22bba3e08f606cc352334b32ffb543d91b42bbb0eff74f69c30dd14951f8987b48209b62e4b4de'
+            'c979a307d555ca85be70954a507cbddf6db43705cd480272610b0fcc0961cda8cf63bd1a9c285831a66e0296583066888a4b526d9da19908179df5246fd873c8')
+
+_kmake() {
+  local args=(ARCH=arm64)
+  if [[ $CARCH != aarch64 || -n ${CROSS_COMPILE:-} ]]; then
+    args+=(CROSS_COMPILE="${CROSS_COMPILE:-aarch64-linux-gnu-}")
+  fi
+  make "${args[@]}" "$@"
+}
+
+prepare() {
+  cd "$_tree"
+  local kernel_patch
+  for kernel_patch in "${_patches[@]}"; do
+    patch -Np1 -i "$srcdir/$kernel_patch"
+  done
+  cp "$srcdir/config-postmarketos-qcom-sc7280.aarch64" .config
+  # An archive has no SCM version; keep modules and initramfs tied to this package release.
+  scripts/config --disable LOCALVERSION_AUTO --set-str LOCALVERSION "-${pkgrel}-sc7280"
+  _kmake olddefconfig
+}
+
+build() {
+  cd "$_tree"
+  unset CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
+  _kmake Image Image.gz vmlinuz.efi modules dtbs
+  _kmake -s kernelrelease > version
+}
+
+package_linux-sc7280() {
+  depends=('coreutils' 'kmod' 'mkinitcpio')
+  optdepends=('firmware-nothing-spacewar: device firmware' 'linux-firmware-qcom: Adreno firmware')
+  conflicts=('linux-aarch64')
+  cd "$_tree"
+  local kernver=$(<version)
+  local modulesdir="$pkgdir/usr/lib/modules/$kernver"
+  _kmake INSTALL_MOD_PATH="$pkgdir/usr" INSTALL_MOD_STRIP=1 DEPMOD=/usr/bin/true modules_install
+  rm -f "$modulesdir/build" "$modulesdir/source"
+  install -Dm644 arch/arm64/boot/Image "$modulesdir/vmlinuz"
+  printf '%s\n' "$pkgbase" > "$modulesdir/pkgbase"
+  install -Dm644 arch/arm64/boot/Image "$pkgdir/boot/Image"
+  install -Dm644 arch/arm64/boot/Image.gz "$pkgdir/boot/Image.gz"
+  install -Dm644 arch/arm64/boot/vmlinuz "$pkgdir/boot/vmlinuz"
+  _kmake INSTALL_DTBS_PATH="$pkgdir/boot/dtbs" dtbs_install
+  install -Dm644 version "$pkgdir/usr/share/kernel/$pkgbase/kernel.release"
+  install -Dm644 "$srcdir/linux-sc7280.preset" "$pkgdir/etc/mkinitcpio.d/linux-sc7280.preset"
+}
+
+package_linux-sc7280-headers() {
+  pkgdesc='Headers and build scripts for linux-sc7280'
+  depends=('pahole')
+  cd "$_tree"
+  local builddir="$pkgdir/usr/lib/modules/$(<version)/build"
+  install -Dt "$builddir" -m644 .config Makefile Module.symvers System.map version vmlinux
+  install -Dt "$builddir/kernel" -m644 kernel/Makefile
+  install -Dt "$builddir/arch/arm64" -m644 arch/arm64/Makefile
+  cp -a --no-preserve=ownership scripts include "$builddir/"
+  cp -a --no-preserve=ownership arch/arm64/include "$builddir/arch/arm64/"
+  install -Dm644 arch/arm64/kernel/asm-offsets.s "$builddir/arch/arm64/kernel/asm-offsets.s"
+  # External modules sometimes include private in-tree headers as well as include/.
+  find . -type f \( -name 'Kconfig*' -o -name '*.h' \) \
+    -exec install -Dm644 '{}' "$builddir/{}" \;
+  find "$builddir" -type f -name '*.o' -delete
+  install -d "$pkgdir/usr/src"
+  ln -s "../lib/modules/$(<version)/build" "$pkgdir/usr/src/$pkgbase"
+}

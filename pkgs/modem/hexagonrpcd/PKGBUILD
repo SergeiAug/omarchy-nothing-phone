@@ -1,0 +1,37 @@
+# Maintainer: user
+# Based on AUR hexagonrpcd (https://aur.archlinux.org/packages/hexagonrpcd):
+# sysusers and 10-fastrpc.rules. Units come from linux-msm v0.5.0.
+pkgname=hexagonrpcd
+pkgver=0.5.0
+pkgrel=1
+pkgdesc='Qualcomm HexagonFS daemon'
+arch=('aarch64' 'x86_64')
+url='https://github.com/linux-msm/hexagonrpc'
+license=('GPL-3.0-or-later')
+makedepends=('meson')
+source=(
+  "$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz"
+  10-fastrpc.rules
+  fastrpc.sysusers
+)
+sha256sums=(
+  '2173985932ab68d8ac593f9954357123bdbbbe9ba5f1b17a098d9cbcec22c5d5'
+  '41dfc4e8c4fd88f461a5a6e4a4e86849eb302f8bcb2b5ce2efa9690f5415d52d'
+  'a2f6b4669f37cd3a8d0b76b1ca15a5030bbaf2f13b0ed857802bee336a7fea66'
+)
+
+build() {
+  arch-meson "hexagonrpc-$pkgver" build
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+  install -Dm644 fastrpc.sysusers "$pkgdir/usr/lib/sysusers.d/fastrpc.conf"
+  install -Dm644 10-fastrpc.rules -t "$pkgdir/usr/lib/udev/rules.d/"
+  install -Dm644 "hexagonrpc-$pkgver/COPYING" "$pkgdir/usr/share/licenses/$pkgname/COPYING"
+}

@@ -1,0 +1,13 @@
+research/omarchy-src/
+research/spacewar-pmos/
+.work/
+logs/
+rollback/
+work/
+research/src-mobile/
+research/src-stage2b/
+research/best-of/src/
+research/best-of/native/
+research/best-of/lomiri/
+pkgs/modem/bootmac/bootmac/
+__pycache__/

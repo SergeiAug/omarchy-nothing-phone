@@ -1,0 +1,25 @@
+# Maintainer: user
+# Based on AUR rmtfs 1.2-1 (https://aur.archlinux.org/packages/rmtfs), bumped to v1.3.
+# Upstream rmtfs.service.in starts `rmtfs -r -P -s` and Makefile installs
+# rmtfs.rules for qcom_rmtfs_mem. The AUR udev.rules UIO symlink is not used.
+pkgname=rmtfs
+pkgver=1.3
+pkgrel=1
+pkgdesc='Qualcomm Remote Filesystem Service Implementation'
+arch=('aarch64' 'x86_64')
+url='https://github.com/linux-msm/rmtfs'
+license=('BSD-3-Clause')
+depends=('qrtr' 'libudev.so')
+source=("$pkgname-v$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('4b6c398806a1046e2256a685d592833de0f37b7245b8adc4797e1791f0e117ee')
+
+build() {
+  cd "$pkgname-$pkgver"
+  make prefix=/usr
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  make prefix=/usr DESTDIR="$pkgdir/" install
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

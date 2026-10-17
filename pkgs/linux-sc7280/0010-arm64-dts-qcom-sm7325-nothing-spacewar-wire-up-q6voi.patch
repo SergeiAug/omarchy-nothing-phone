@@ -1,0 +1,63 @@
+From 1d234a9fd303b6e2882398c65e2bd1cb3afc8372 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Eduardo=20Garc=C3=ADa-M=C3=A1dico=20Portabella?=
+ <woodyst@gmail.com>
+Date: Sat, 12 Sep 2026 19:30:50 +0200
+Subject: [PATCH 10/40] arm64: dts: qcom: sm7325-nothing-spacewar: wire up
+ q6voice CS voice call audio
+
+Add the MVM/CVS/CVP APR services under the ADSP and a hostless CS-Voice front-end link, placed after MultiMedia3 so the UCM PCM numbering (MM1-3 = hw:0,0-2) does not move. Same layout as the surya series.
+---
+ .../boot/dts/qcom/sm7325-nothing-spacewar.dts | 26 +++++++++++++++++++
+ 1 file changed, 26 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/sm7325-nothing-spacewar.dts b/arch/arm64/boot/dts/qcom/sm7325-nothing-spacewar.dts
+index 2e9c99f2b..2cac34eab 100644
+--- a/arch/arm64/boot/dts/qcom/sm7325-nothing-spacewar.dts
++++ b/arch/arm64/boot/dts/qcom/sm7325-nothing-spacewar.dts
+@@ -15,6 +15,7 @@
+ #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
+ #include <dt-bindings/sound/qcom,q6afe.h>
+ #include <dt-bindings/sound/qcom,q6asm.h>
++#include <dt-bindings/sound/qcom,q6voice.h>
+ 
+ #include "sm7325.dtsi"
+ #include "pm7325.dtsi"
+@@ -1450,6 +1451,18 @@ &remoteproc_wpss {
+ 	status = "okay";
+ };
+ 
++&q6cvp {
++	status = "okay";
++};
++
++&q6cvs {
++	status = "okay";
++};
++
++&q6mvm {
++	status = "okay";
++};
++
+ &sound {
+ 	compatible = "qcom,sm7325-sndcard",
+ 		     "qcom,sm8250-sndcard";
+@@ -1497,6 +1510,19 @@ cpu {
+ 		};
+ 	};
+ 
++	/*
++	 * Hostless front-end for CS voice calls: opening this PCM brings up the
++	 * q6voice DSP session (MVM/CVS/CVP) that bridges the modem vocoder to the
++	 * AFE ports. No samples cross the CPU, so there is no codec here.
++	 */
++	cs-voice-dai-link {
++		link-name = "CS-Voice";
++
++		cpu {
++			sound-dai = <&q6voicedai CS_VOICE>;
++		};
++	};
++
+ 	i2s-dai-link {
+ 		link-name = "I2S Playback";
+ 

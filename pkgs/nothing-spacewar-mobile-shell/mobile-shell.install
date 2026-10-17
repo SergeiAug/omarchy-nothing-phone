@@ -1,0 +1,8 @@
+post_install() {
+  udevadm control --reload-rules
+  udevadm trigger --action=add --subsystem-match=leds
+}
+
+post_upgrade() {
+  post_install
+}

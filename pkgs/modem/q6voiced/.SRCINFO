@@ -1,0 +1,15 @@
+pkgbase = q6voiced
+	pkgdesc = Userspace QDSP6 voice call audio daemon for oFono and ModemManager
+	pkgver = 0.3.1
+	pkgrel = 1
+	url = https://gitlab.postmarketos.org/postmarketOS/q6voiced
+	arch = aarch64
+	arch = x86_64
+	license = MIT
+	makedepends = meson
+	depends = alsa-lib
+	depends = dbus
+	source = q6voiced-0.3.1.tar.gz::https://gitlab.postmarketos.org/postmarketOS/q6voiced/-/archive/0.3.1/q6voiced-0.3.1.tar.gz
+	sha256sums = b9728837c137113737f1492ab08fcdcea58de157cc5ec204452587c7a9b111ba
+
+pkgname = q6voiced

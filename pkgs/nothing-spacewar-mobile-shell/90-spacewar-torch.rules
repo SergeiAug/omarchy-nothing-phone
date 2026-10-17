@@ -1,0 +1,5 @@
+# The image's session user belongs to wheel (tools/build-rootfs.sh).
+# Sysfs attributes need explicit permissions; MODE on an LED has no device node.
+ACTION=="add", SUBSYSTEM=="leds", TEST=="flash_brightness", RUN+="/usr/bin/chgrp wheel /sys%p/brightness", RUN+="/usr/bin/chmod 0664 /sys%p/brightness"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*torch*|*flash*", RUN+="/usr/bin/chgrp wheel /sys%p/brightness", RUN+="/usr/bin/chmod 0664 /sys%p/brightness"
+ACTION=="add", SUBSYSTEM=="leds", TEST=="flash_strobe", RUN+="/usr/bin/chgrp wheel /sys%p/brightness", RUN+="/usr/bin/chmod 0664 /sys%p/brightness"

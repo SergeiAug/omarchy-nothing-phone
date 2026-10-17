@@ -1,0 +1,68 @@
+# Maintainer: Spacewar contributors
+pkgname=nothing-spacewar-mobile-ui
+pkgver=0.4.0
+pkgrel=4
+pkgdesc='Reversible mobile Omarchy shell profile for Nothing Phone (1)'
+arch=('any')
+url='https://github.com/derekross/omarchy-mobile'
+license=('MIT')
+depends=('omarchy-dev>=4.0.0.r7031' 'hyprland>=0.56.2' 'quickshell' 'python' 'omarchy-osk-spacewar' 'hyprgrass' 'blueman' 'nm-connection-editor')
+source=('spacewar-mobile' 'spacewar-mobile-setup' 'phone-device.lua' 'phone-mobile.lua' 'LICENSE.omarchy-mobile' 'README.md' 'VALIDATION.md'
+        'Shade.qml' 'Switcher.qml'
+        'spacewar.shade.json' 'spacewar.switcher.json'
+        'PlainLabel.qml' 'TouchButton.qml' 'MobilePanel.qml' 'Navigation.qml' 'QuickTile.qml' 'phone-lock.lua' 'lock_setup.py' 'lock-upstream.json' 'LICENSE.omarchy'
+        'Service.qml' 'LockView.qml' 'spacewar.lock.json' 'FingerprintModel.js' 'LockFeedSurface.qml' 'poster.sh')
+
+sha256sums=('139a9871c14735dd00981956ea373dc1d8a53d7d08a4ff7041e49d5f589d9a60'
+            '63f6ebd467607a77f54ed3e0e496ba5c24752b4b9e454e88396948545676782a'
+            '68673280dd7fb12fdabe5320f0ae2369e413c92e734b8744ef5c8dc49973ea84'
+            'e4244d8a41f0b9794435f367ae32295d0080f0b053e5f4e909b4881afd42abc1'
+            '3592ee42cb9bdab72966bfc948f8a19578b2841b5b825578db7a02634ae6c000'
+            'e7b7b2e1ddd59835c8d717f28c09b3a7275856a817ea7d6fa58857792f6f5071'
+            '82377464d61294035096d39d0a9dcfc88bc995a416313290d08b8f347cc4963f'
+            '4cae6e660bc7b45ed8b426aeb4c1e8097b8411c24fcc5e89f4eed58202334017'
+            '482aead52ea6aba0af8ed2aa286885f1f0b20aaaf6a74021c2cf6eaaff951878'
+            '50d4889af64e28f9c076742d086c840c24303966dc397f5ee0e5fe54262ae871'
+            'b7c9c859c01a60ae8acb97dee159ef6d50b62e38b942abfa267cab0ee63e84db'
+            'c5b8b64cecd98ca00f3686832f721530c7471241e845cdc17ce6b08ed37789f3'
+            '78bb771520efe357f1429cedaf5b73503654e28d805fb1aaa3d27bb2aa4533ca'
+            'f59b679a75b4383d1141d42d0f852cd4ca2b36bc71faf00a5d64dc52ca2a10bd'
+            'e8d348785e2584f71f17e3b6fabe6922e0f5576e2b6fea64fbd19620fdd64d98'
+            '55684ac360382f9b00c23aaf7f29752fe6b162b9384417784cc3be2ccbaa2a7f'
+            '0cfe77bf07051391bb492692e04a9599ecbc1c376f28eaa7476b9217cb06b3da'
+            '4893209ea2726563cef9e4f09b02658451e9a79c2b3f33667b8286acd77adee7'
+            '1f3b34f78ab7d14ce67ff7534bd696805563cc8a6d781025d51828a7bb9b8fd3'
+            '717ba1949502290f8e47688ae2e323acd06c8ca47aec9f7596b15f678c1af4a2'
+            'ba587b7d09e6268750e8c83a32ea2a0bb540aa4fe4042c3010194bd86013f952'
+            '98818d64829b1503d50b8f49059be3f6134259d037be35260ab47430fde47859'
+            '7ee6f4947eaf7456bbfc1ada22bc9f57b5b5190cfeeec7249b25b7ed15cb4d0c'
+            '6684762de3e3b88445a165344a9093e8faedb0647137199f16ffd1861db6f87c'
+            'f5c4939dcfbe311f5f87d8fd425f0aab8d9c445431718524af466adabd5b5d91'
+            '4941c8ae143a0ed0b226a6c54e1f94cbdd5937907cc01d0d0866c0cf34d916df')
+
+package() {
+  local dest="$pkgdir/usr/share/nothing-spacewar/mobile"
+  local name entry
+  install -dm755 "$dest/ui" "$pkgdir/usr/bin" "$pkgdir/usr/share/licenses/$pkgname"
+  for name in shade switcher; do
+    case "$name" in
+      shade) entry=Shade ;;
+      switcher) entry=Switcher ;;
+    esac
+    install -Dm644 "$srcdir/spacewar.$name.json" "$dest/plugins/spacewar.$name/manifest.json"
+    install -m644 "$srcdir/$entry.qml" "$dest/plugins/spacewar.$name/"
+    ln -s ../../ui "$dest/plugins/spacewar.$name/ui"
+  done
+  install -m644 "$srcdir/PlainLabel.qml" "$srcdir/TouchButton.qml" "$srcdir/MobilePanel.qml" "$srcdir/Navigation.qml" "$srcdir/QuickTile.qml" "$dest/ui/"
+  install -dm755 "$dest/plugins/spacewar.lock"
+  install -m644 "$srcdir/Service.qml" "$srcdir/LockView.qml" "$srcdir/FingerprintModel.js" "$srcdir/LockFeedSurface.qml" "$dest/plugins/spacewar.lock/"
+  install -m644 "$srcdir/spacewar.lock.json" "$dest/plugins/spacewar.lock/manifest.json"
+  install -m755 "$srcdir/poster.sh" "$dest/plugins/spacewar.lock/"
+  install -m644 "$srcdir/phone-lock.lua" "$srcdir/lock_setup.py" "$srcdir/lock-upstream.json" "$dest/"
+  install -m644 "$srcdir/LICENSE.omarchy" "$pkgdir/usr/share/licenses/$pkgname/LICENSE.omarchy"
+  install -m644 "$srcdir/phone-device.lua" "$srcdir/phone-mobile.lua" "$srcdir/README.md" "$srcdir/VALIDATION.md" "$srcdir/LICENSE.omarchy-mobile" "$dest/"
+  install -m644 "$srcdir/LICENSE.omarchy-mobile" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -m755 "$srcdir/spacewar-mobile" "$srcdir/spacewar-mobile-setup" "$dest/"
+  ln -s /usr/share/nothing-spacewar/mobile/spacewar-mobile "$pkgdir/usr/bin/spacewar-mobile"
+  ln -s /usr/share/nothing-spacewar/mobile/spacewar-mobile-setup "$pkgdir/usr/bin/spacewar-mobile-setup"
+}

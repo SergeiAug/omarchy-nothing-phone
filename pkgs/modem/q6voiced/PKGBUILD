@@ -1,0 +1,27 @@
+# Maintainer: user
+# Alpine testing/q6voiced 0.3.1. No AUR package.
+pkgname=q6voiced
+pkgver=0.3.1
+pkgrel=1
+pkgdesc='Userspace QDSP6 voice call audio daemon for oFono and ModemManager'
+arch=('aarch64' 'x86_64')
+url='https://gitlab.postmarketos.org/postmarketOS/q6voiced'
+license=('MIT')
+depends=('alsa-lib' 'dbus')
+makedepends=('meson')
+source=("$pkgname-$pkgver.tar.gz::$url/-/archive/$pkgver/$pkgname-$pkgver.tar.gz")
+sha256sums=('b9728837c137113737f1492ab08fcdcea58de157cc5ec204452587c7a9b111ba')
+
+build() {
+  arch-meson "$pkgname-$pkgver" build -Dopenrc=disabled
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+  install -Dm644 "$pkgname-$pkgver/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

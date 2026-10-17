@@ -1,0 +1,38 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: MIT
+import json
+from pathlib import Path
+import sys
+
+
+def find_led(root=Path('/sys/class/leds')):
+    for led in sorted(root.iterdir()):
+        if (any(led.glob('flash_*')) or any(word in led.name.lower() for word in ('torch', 'flash'))) \
+                and (led/'brightness').is_file() and (led/'max_brightness').is_file():
+            if int((led/'max_brightness').read_text()) > 0:
+                return led
+    return None
+
+
+def operate(action, root=Path('/sys/class/leds')):
+    led = find_led(root)
+    if led is None:
+        if action != 'status':
+            raise FileNotFoundError('no torch-capable LED')
+        return dict(available=False, enabled=False)
+    if action != 'status':
+        # brightness is continuous torch, never flash_strobe. A quarter of the
+        # driver's torch range avoids using the flash-current limit as a torch cap.
+        value = max(1, int((led/'max_brightness').read_text()) // 4) if action == 'on' else 0
+        (led/'brightness').write_text(str(value))
+    return dict(available=True, enabled=int((led/'brightness').read_text()) > 0, device=led.name)
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 2 or sys.argv[1] not in ('status', 'on', 'off'):
+        sys.exit('usage: spacewar-shell-torch status|on|off')
+    try:
+        print(json.dumps(operate(sys.argv[1])))
+    except (OSError, ValueError) as error:
+        print(str(error), file=sys.stderr)
+        sys.exit(1)

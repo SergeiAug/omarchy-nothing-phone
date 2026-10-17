@@ -1,0 +1,28 @@
+# Maintainer: user
+# Based on Alpine aports testing/dummystreamhack (Val Packett, Wren IX).
+pkgname=dummystreamhack
+pkgver=0.r20260527.gf82b9a9
+pkgrel=1
+_commit=f82b9a9f1583bfa44ae32a408318af1e44af3c5e
+pkgdesc='Opens a dummy ALSA PCM stream that connects voice call modem audio to outputs/inputs'
+arch=('aarch64' 'x86_64')
+url='https://codeberg.org/valpackett/dummystreamhack'
+license=('MIT')
+depends=('alsa-lib')
+makedepends=('meson')
+source=("$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz")
+sha512sums=('f1905f2cf5feb57e871f044cf5f92daae44fb0f4539620edfb213d66d055c0ac44bbbb938620651875a39e272e06d47c787bf7aa8fbeb7a5079bbee805fa7e09')
+
+build() {
+  arch-meson "$pkgname" build
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+  install -Dm644 "$pkgname/LICENSE" -t "$pkgdir/usr/share/licenses/$pkgname/"
+}

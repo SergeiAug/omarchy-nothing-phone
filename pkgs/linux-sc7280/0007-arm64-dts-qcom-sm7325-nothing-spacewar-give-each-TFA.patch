@@ -1,0 +1,48 @@
+From 4d767590705d83d7c4e4b13cb39497b41f134dff Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Eduardo=20Garc=C3=ADa-M=C3=A1dico=20Portabella?=
+ <woodyst@gmail.com>
+Date: Sat, 17 Oct 2026 05:27:09 +0300
+Subject: [PATCH 07/40] arm64: dts: qcom: sm7325-nothing-spacewar: give each
+ TFA9873 its own channel and name prefix
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Both amplifiers sit on the same primary MI2S line. The tfa987x driver picks the TDM slot it
+plays from the "sound-channel" property (TFA987X_TDM_CFG6 SPKS) and defaults to 0, so without it
+both amplifiers played the left channel. They also registered identical DAPM widgets ("PWUP",
+"Speaker"), which ASoC reports as overwritten, so the second amplifier was not reliably powered
+and the bottom speaker stayed silent.
+
+Put the earpiece amplifier (0x34) on channel 0 and the loudspeaker (0x35) on channel 1, each
+with its own sound-name-prefix.
+
+Signed-off-by: Eduardo García-Mádico Portabella <woodyst@gmail.com>
+---
+ arch/arm64/boot/dts/qcom/sm7325-nothing-spacewar.dts | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm64/boot/dts/qcom/sm7325-nothing-spacewar.dts b/arch/arm64/boot/dts/qcom/sm7325-nothing-spacewar.dts
+index a58cc342c..2e9c99f2b 100644
+--- a/arch/arm64/boot/dts/qcom/sm7325-nothing-spacewar.dts
++++ b/arch/arm64/boot/dts/qcom/sm7325-nothing-spacewar.dts
+@@ -1065,6 +1065,9 @@ tfa9873_l: codec@34 { /* EAR */
+ 		reg = <0x34>;
+ 		reset-gpio = <&tlmm 101 GPIO_ACTIVE_HIGH>;
+ 
++		sound-channel = <0>;
++		sound-name-prefix = "Earpiece";
++
+ 		#sound-dai-cells = <1>;
+ 	};
+ 
+@@ -1074,6 +1077,9 @@ tfa9873_r: codec@35 { /* SPK */
+ 		reg = <0x35>;
+ 		reset-gpio = <&tlmm 101 GPIO_ACTIVE_HIGH>;
+ 
++		sound-channel = <1>;
++		sound-name-prefix = "Speaker";
++
+ 		#sound-dai-cells = <1>;
+ 	};
+ };

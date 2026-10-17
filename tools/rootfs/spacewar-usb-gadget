@@ -1,0 +1,41 @@
+#!/bin/bash
+set -euo pipefail
+g=/sys/kernel/config/usb_gadget/spacewar
+udc=a600000.usb
+if [[ ${1:-start} == stop ]]; then
+  if [[ -d $g && -n $(<"$g/UDC") ]]; then printf '\n' > "$g/UDC"; fi
+  exit 0
+fi
+modprobe libcomposite
+mountpoint -q /sys/kernel/config || mount -t configfs configfs /sys/kernel/config
+for existing in /sys/kernel/config/usb_gadget/*/UDC; do
+  [[ -f $existing && $existing != "$g/UDC" ]] || continue
+  if [[ -n $(<"$existing") ]]; then
+    echo "spacewar-usb-gadget: another gadget is bound: $existing" >&2
+    exit 1
+  fi
+done
+if [[ -d $g && $(<"$g/UDC") == "$udc" ]]; then exit 0; fi
+mkdir -p "$g"
+# Linux Foundation / Multifunction Composite Gadget, matching pmOS usb-signaller.
+printf '0x1d6b\n' > "$g/idVendor"
+printf '0x0103\n' > "$g/idProduct"
+printf '0x0200\n' > "$g/bcdUSB"
+mkdir -p "$g/strings/0x409" "$g/configs/c.1/strings/0x409" "$g/functions/ncm.usb0"
+printf 'nothing-spacewar\n' > "$g/strings/0x409/serialnumber"
+printf 'Nothing\n' > "$g/strings/0x409/manufacturer"
+printf 'Spacewar NCM\n' > "$g/strings/0x409/product"
+printf 'USB network\n' > "$g/configs/c.1/strings/0x409/configuration"
+printf '02:00:00:42:00:01\n' > "$g/functions/ncm.usb0/dev_addr"
+printf '02:00:00:42:00:02\n' > "$g/functions/ncm.usb0/host_addr"
+[[ -L $g/configs/c.1/ncm.usb0 ]] || ln -s "$g/functions/ncm.usb0" "$g/configs/c.1/ncm.usb0"
+for ((attempt=0; attempt<300; attempt++)); do
+  role=/sys/class/usb_role/$udc-role-switch/role
+  if [[ -e /sys/class/udc/$udc && -r $role ]] && [[ $(<"$role") == device ]]; then
+    printf '%s\n' "$udc" > "$g/UDC"
+    exit 0
+  fi
+  sleep 0.1
+done
+echo 'spacewar-usb-gadget: no UDC with device role within 30 seconds' >&2
+exit 1

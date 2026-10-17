@@ -1,0 +1,43 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: MIT
+import json
+import re
+import subprocess
+
+# Only applications with a conventional history receive Alt+Left.
+HISTORY_CLASSES = re.compile(
+    r'(^|[.\-])(chromium|google-chrome|chrome|firefox|librewolf|brave-browser|'
+    r'vivaldi|microsoft-edge|nautilus|dolphin|thunar|nemo|pcmanfm|pcmanfm-qt)([.\-]|$)', re.I)
+
+
+def action(window):
+    tags = {tag.rstrip('*') for tag in window.get('tags', [])}
+    if 'spacewar-dialog' in tags:
+        return '', 'Escape'
+    if HISTORY_CLASSES.search(window.get('class', '')):
+        return 'ALT', 'Left'
+    return None
+
+
+def main():
+    window = json.loads(subprocess.check_output(['hyprctl', '-j', 'activewindow'], text=True, timeout=1))
+    shortcut = action(window)
+    address = window.get('address', '')
+    if shortcut and re.fullmatch(r'0x[0-9a-fA-F]+', address):
+        mods, key = shortcut
+        subprocess.run(['hyprctl', 'dispatch',
+                        'hl.dsp.send_shortcut({mods="%s",key="%s",window="address:%s"})' % (mods, key, address)],
+                       timeout=1, check=True)
+    elif not shortcut:
+        subprocess.run(['omarchy-shell', 'shell', 'call', 'omamobile.home', 'goHome', ''], timeout=1, check=True)
+        subprocess.run(['hyprctl', 'dispatch', 'hl.dsp.focus({workspace="empty"})'], timeout=1, check=True)
+        subprocess.run(['omarchy-shell', 'onscreen-keyboard', 'hide'], timeout=1, check=True)
+    else:
+        raise ValueError('invalid active window address')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, ValueError, subprocess.SubprocessError):
+        raise SystemExit(1)

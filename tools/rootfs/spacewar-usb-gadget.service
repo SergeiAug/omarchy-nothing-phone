@@ -1,0 +1,18 @@
+[Unit]
+StartLimitIntervalSec=0
+Description=Spacewar USB NCM gadget
+Requires=spacewar-usb-reprobe.service
+After=spacewar-usb-reprobe.service systemd-udev-trigger.service
+Wants=systemd-networkd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/libexec/spacewar-usb-gadget start
+ExecStop=/usr/local/libexec/spacewar-usb-gadget stop
+TimeoutStartSec=60
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

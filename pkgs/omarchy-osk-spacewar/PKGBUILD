@@ -1,0 +1,27 @@
+# Maintainer: Spacewar contributors
+pkgname=omarchy-osk-spacewar
+pkgver=0.3.4.r4.gba346b0
+pkgrel=1
+pkgdesc='Omarchy on-screen keyboard with Russian layout and switchLanguage IPC'
+arch=('any')
+url='https://github.com/yeutterg/omarchy-on-screen-keyboard'
+license=('MIT')
+depends=('omarchy-dev' 'quickshell' 'python-pywayland' 'python-gobject' 'libxkbcommon')
+checkdepends=('nodejs')
+source=('omarchy-osk-ba346b0.tar.gz')
+sha256sums=('7227f51153cbbca32cbe69fb371e3c8dd1c25e9f2a2efdab5f8f344c2f9fb77b')
+
+check() {
+  python omarchy-osk/tests/helper_unicode.py
+  node omarchy-osk/tests/layouts.mjs
+  node omarchy-osk/tests/service-state.mjs
+}
+
+package() {
+  local dest="$pkgdir/usr/share/nothing-spacewar/osk"
+  install -dm755 "$dest/helper/protocols"
+  install -m644 omarchy-osk/*.qml omarchy-osk/*.js omarchy-osk/manifest.json "$dest/"
+  install -m644 omarchy-osk/helper/*.py "$dest/helper/"
+  install -m644 omarchy-osk/helper/protocols/*.xml "$dest/helper/protocols/"
+  install -Dm644 omarchy-osk/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

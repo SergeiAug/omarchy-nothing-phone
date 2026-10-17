@@ -1,0 +1,3 @@
+ALL_kver='/boot/Image'
+PRESETS=('default')
+default_image='/boot/initramfs-linux-sc7280.img'

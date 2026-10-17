@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "spacewar.shade",
+  "name": "Spacewar shade",
+  "version": "0.3.0",
+  "author": "Spacewar contributors; based on Derek Ross / Omarchy Mobile",
+  "license": "MIT",
+  "kinds": [
+    "panel"
+  ],
+  "entryPoints": {
+    "panel": "Shade.qml"
+  },
+  "keepLoaded": true
+}

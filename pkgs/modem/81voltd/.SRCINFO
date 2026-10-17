@@ -1,0 +1,16 @@
+pkgbase = 81voltd
+	pkgdesc = Server-side implementation of IMS Data service on QMI/QRTR
+	pkgver = 1.2.0.r2.ga7794dd
+	pkgrel = 2
+	url = https://gitlab.postmarketos.org/modem/81voltd
+	arch = aarch64
+	arch = x86_64
+	license = GPL-2.0-or-later
+	makedepends = meson
+	depends = qrtr
+	depends = libqmi
+	depends = modemmanager
+	source = 81voltd-a7794dd6c8ac216a97dc5a931edab2dfc46eca2a.tar.gz::https://gitlab.postmarketos.org/modem/81voltd/-/archive/a7794dd6c8ac216a97dc5a931edab2dfc46eca2a/81voltd-a7794dd6c8ac216a97dc5a931edab2dfc46eca2a.tar.gz
+	sha256sums = abd12b986fbbb9a9bf7e17c0485cdb261330f330fcad95f0dc4eeb701d060dad
+
+pkgname = 81voltd

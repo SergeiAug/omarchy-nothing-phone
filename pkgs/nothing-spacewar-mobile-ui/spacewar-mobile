@@ -1,0 +1,181 @@
+#!/usr/bin/python3
+import ast
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+PANELS = ['spacewar.shade', 'spacewar.switcher']
+
+
+def run(*args, timeout=4):
+    result = subprocess.run(args, text=True, capture_output=True, timeout=timeout, check=True,
+                            env=dict(os.environ, LC_ALL='C.UTF-8'))  # Qt (omarchy-shell) prints a locale warning to stdout under plain C
+    return result.stdout.strip()
+
+
+def optional(*args):
+    try:
+        return run(*args)
+    except (OSError, subprocess.SubprocessError):
+        return ''
+
+
+def ipc(*args):
+    return run('omarchy-shell', *args)
+
+
+def unlocked():
+    if ipc('lock', 'isLocked') != 'false':
+        raise ValueError('mobile action unavailable while locked')
+
+
+def hide_panels():
+    for panel in PANELS:
+        ipc('shell', 'hide', panel)
+
+
+def panel_opened(panel):
+    # A panel whose plugin is not enabled answers with nothing or an error, not JSON.
+    try:
+        return bool(json.loads(ipc('shell', 'call', panel, 'snapshot', '') or '{}').get('opened'))
+    except (subprocess.CalledProcessError, ValueError):
+        return False
+
+
+def back():
+    for panel in PANELS:
+        if panel_opened(panel):
+            ipc('shell', 'hide', panel)
+            return
+    active = json.loads(run('hyprctl', '-j', 'activewindow'))
+    app = active.get('class', '').lower()
+    browsers_files = {'chromium', 'google-chrome', 'brave-browser', 'firefox', 'org.mozilla.firefox',
+                      'org.gnome.nautilus', 'nautilus', 'thunar', 'pcmanfm', 'pcmanfm-qt', 'nemo', 'org.xfce.thunar', 'dolphin', 'org.kde.dolphin'}
+    settings = {'nm-connection-editor', 'blueman-manager', 'org.gnome.settings', 'gnome-control-center', 'org.kde.systemsettings', 'systemsettings', 'pavucontrol'}
+    if app in {'foot', 'footclient', 'ghostty', 'com.mitchellh.ghostty', 'alacritty', 'kitty', 'org.wezfurlong.wezterm'}:
+        return
+    if app in browsers_files or app.startswith(('chrome-', 'brave-')):
+        mods, key = 'ALT', 'Left'
+    elif app in settings:
+        mods, key = '', 'Escape'
+    else:
+        return
+    address = active.get('address', '')
+    if not re.fullmatch(r'0x[0-9a-fA-F]+', address):
+        raise ValueError('invalid active window address')
+    unlocked()
+    command = 'hl.dsp.send_key_state({mods="%s",key="%s",state="%s",window="address:%s"})'
+    run('hyprctl', 'dispatch', command % (mods, key, 'down', address))
+    try:
+        time.sleep(0.05)
+    finally:
+        run('hyprctl', 'dispatch', command % (mods, key, 'up', address))
+
+
+
+FLASH = Path('/sys/class/leds/white:flash/brightness')
+
+
+def osk_status():
+    # The phone uses omarchy-on-screen-keyboard (our fork adds switchLanguage); squeekboard is retired.
+    return json.loads(run('omarchy-shell', 'onscreen-keyboard', 'status') or '{}')
+
+
+def osk_visible():
+    return bool(osk_status().get('shown'))
+
+
+def shade_state():
+    state = {}
+    try:
+        state['layout'] = osk_status().get('language', '').upper()
+    except (ValueError, subprocess.SubprocessError, OSError):
+        state['layout'] = ''
+    try:
+        state['keyboard'] = osk_visible()
+    except (OSError, ValueError, subprocess.SubprocessError):
+        state['keyboard'] = None
+    try:
+        monitors = json.loads(run('hyprctl', '-j', 'monitors'))
+        monitor = next(m for m in monitors if m['name'] == 'DSI-1')
+        state['rotated'] = monitor['transform'] != 0
+    except (OSError, ValueError, KeyError, StopIteration, subprocess.SubprocessError):
+        state['rotated'] = None
+    dnd = optional('omarchy-shell', 'notifications', 'dndState')
+    state['dnd'] = None if dnd not in ('on', 'off') else dnd == 'on'
+    brightness = optional('omarchy-brightness-display', '--monitor', 'DSI-1')
+    try:
+        state['brightness'] = max(1, min(100, int(brightness)))
+    except ValueError:
+        state['brightness'] = None
+    state['flashAvailable'] = FLASH.exists() and os.access(FLASH, os.W_OK)
+    state['flash'] = state['flashAvailable'] and FLASH.read_text().strip() != '0'
+    return state
+
+
+def main():
+    if len(sys.argv) < 2:
+        raise ValueError('usage: spacewar-mobile <home|shade|switcher|back|network|bluetooth|audio|power|previous|next|layout|keyboard|rotate|close>')
+    action = sys.argv[1]
+    if action == 'brightness':
+        unlocked()
+        if len(sys.argv) != 3 or not sys.argv[2].isdigit() or not 1 <= int(sys.argv[2]) <= 100:
+            raise ValueError('brightness must be 1..100')
+        run('omarchy-brightness-display', '--no-osd', '--monitor', 'DSI-1', sys.argv[2] + '%')
+        return
+    if len(sys.argv) != 2:
+        raise ValueError('too many arguments')
+    unlocked()
+    if action == 'shade-state':
+        print(json.dumps(shade_state()))
+    elif action == 'dnd':
+        ipc('notifications', 'toggleDnd')
+    elif action == 'flash':
+        if not FLASH.exists() or not os.access(FLASH, os.W_OK):
+            raise ValueError('flash is not writable')
+        FLASH.write_text('1' if FLASH.read_text().strip() == '0' else '0')
+    elif action == 'home':
+        hide_panels()
+        ipc('omarchy.dock', 'apps')
+    elif action in ['shade', 'switcher']:
+        hide_panels()
+        if ipc('shell', 'summon', 'spacewar.' + action, '{}') != 'ok':
+            raise ValueError('mobile plugin is not available')
+    elif action == 'back':
+        back()
+    elif action == 'close':
+        hide_panels()
+        run('hyprctl', 'dispatch', 'hl.dsp.window.close()')
+    elif action in ['network', 'bluetooth', 'audio', 'power']:
+        hide_panels()
+        if ipc('shell', 'summon', 'omarchy.' + action, '{}') != 'ok':
+            raise ValueError('stock panel is not available')
+    elif action in ['previous', 'next']:
+        run('hyprctl', 'dispatch', 'hl.dsp.focus({direction="' + ('l' if action == 'previous' else 'r') + '"})')
+    elif action == 'layout':
+        run('omarchy-shell', 'onscreen-keyboard', 'switchLanguage')
+        run('omarchy-shell', 'onscreen-keyboard', 'show')
+    elif action == 'keyboard':
+        hide_panels()
+        run('omarchy-shell', 'onscreen-keyboard', 'toggle')
+    elif action == 'rotate':
+        monitors = json.loads(run('hyprctl', '-j', 'monitors'))
+        monitor = next(m for m in monitors if m['name'] == 'DSI-1')
+        transform = 1 if monitor['transform'] == 0 else 0
+        scale = float(monitor['scale'])
+        x, y = int(monitor['x']), int(monitor['y'])
+        run('hyprctl', 'eval', 'hl.monitor({output="DSI-1",mode="preferred",position="%sx%s",scale=%s,transform=%s}); hl.config({input={touchdevice={output="DSI-1",transform=%s}}})' % (x, y, scale, transform, transform))
+    else:
+        raise ValueError('unknown action')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, ValueError, KeyError, StopIteration, subprocess.SubprocessError) as error:
+        print(str(error), file=sys.stderr)
+        raise SystemExit(1)

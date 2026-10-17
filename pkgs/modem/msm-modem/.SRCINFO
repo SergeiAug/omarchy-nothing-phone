@@ -1,0 +1,15 @@
+pkgbase = msm-modem
+	pkgdesc = Common support for Qualcomm MSM modems (UIM slot selection)
+	pkgver = 13.r1.g5f504e0
+	pkgrel = 1
+	url = https://gitlab.postmarketos.org/postmarketOS/msm-modem
+	arch = aarch64
+	arch = x86_64
+	license = GPL-3.0-or-later
+	makedepends = meson
+	depends = libqmi
+	depends = rmtfs
+	source = msm-modem-5f504e0677f40dec93018d53a9b71aa1931db238.tar.gz::https://gitlab.postmarketos.org/postmarketOS/msm-modem/-/archive/5f504e0677f40dec93018d53a9b71aa1931db238/msm-modem-5f504e0677f40dec93018d53a9b71aa1931db238.tar.gz
+	sha256sums = f6a3d49c85fcaeab939aee57e666a0f6ba4b2061c4fe8d0a29206c986ebd2377
+
+pkgname = msm-modem

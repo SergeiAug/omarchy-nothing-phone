@@ -1,0 +1,26 @@
+# Maintainer: user
+# Based on AUR tqftpserv 1.2-1 (https://aur.archlinux.org/packages/tqftpserv).
+# Pinned past v1.2: xz/zstd autodetection and the readwrite populate unit.
+pkgname=tqftpserv
+pkgver=1.2.r23.gb31de6d
+pkgrel=1
+_commit=b31de6db4f31d09119293203d39636b827f16321
+pkgdesc='Trivial File Transfer Protocol server over AF_QIPCRTR'
+arch=('aarch64' 'x86_64')
+url='https://github.com/linux-msm/tqftpserv'
+license=('BSD-3-Clause')
+depends=('qrtr' 'xz' 'zstd')
+makedepends=('meson')
+source=("$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz")
+sha256sums=('e279d035149f4158965ee9adbefabde8361bd064a847292596c6f92259bd122e')
+
+build() {
+  arch-meson "$pkgname-$_commit" build \
+    -Dsystemd-unit-prefix=/usr/lib/systemd/system
+  meson compile -C build
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+  install -Dm644 "$pkgname-$_commit/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

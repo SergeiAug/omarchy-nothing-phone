@@ -1,0 +1,17 @@
+0.3.3-1 / OSK 0.3.4.r4.gba346b0-1 laptop validation (2026-10-18)
+makepkg --force --nodeps, both packages: PASS
+13 Python tests, Node motion/fix1/fix2/fix3/105 widgets, Qt touch tests: PASS
+Lua syntax, Hyprland 0.56.2 --verify-config: PASS
+QML lint against r7031: PASS (existing metadata/block-scope warnings)
+Real archive version, helper/config/plugin/widget bytes and payload inspection: PASS
+OSK static XKB: one upload, all RU/EN/case/symbols, safe standard-keymap binding symbols; IM commit serial: PASS
+Real r7031/labwc: long slow release recents with held=false, 30px bottom band, preview: PASS
+Real virtual-pointer clicks: × 3->2, Закрыть все 2->0, home drawer above gesture band: PASS
+Live gesture logging disable/enable, restart/undo, OSK/shade/drawer: PASS
+Native GTK/Qt parent-dialog rendering and Escape delivery (labwc placement): PASS
+No QML TypeError/ReferenceError in final host logs.
+Hyprland live map/input/bind checks unavailable: no /dev/dri, CBackend::create failed.
+Portal failure from the phone not reproduced live; direct placement no longer depends on dynamic tags.
+Chromium/Obsidian IM, physical touch and compositor client-hint limits require Claude acceptance.
+No phone access, deployment, system package installation or active desktop configuration writes.
+Evidence: research/shell-v5/fix3/; checksums: each package's SHA256SUMS.

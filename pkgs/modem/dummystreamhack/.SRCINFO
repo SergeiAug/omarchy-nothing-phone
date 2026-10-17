@@ -1,0 +1,14 @@
+pkgbase = dummystreamhack
+	pkgdesc = Opens a dummy ALSA PCM stream that connects voice call modem audio to outputs/inputs
+	pkgver = 0.r20260527.gf82b9a9
+	pkgrel = 1
+	url = https://codeberg.org/valpackett/dummystreamhack
+	arch = aarch64
+	arch = x86_64
+	license = MIT
+	makedepends = meson
+	depends = alsa-lib
+	source = dummystreamhack-f82b9a9f1583bfa44ae32a408318af1e44af3c5e.tar.gz::https://codeberg.org/valpackett/dummystreamhack/archive/f82b9a9f1583bfa44ae32a408318af1e44af3c5e.tar.gz
+	sha512sums = f1905f2cf5feb57e871f044cf5f92daae44fb0f4539620edfb213d66d055c0ac44bbbb938620651875a39e272e06d47c787bf7aa8fbeb7a5079bbee805fa7e09
+
+pkgname = dummystreamhack
