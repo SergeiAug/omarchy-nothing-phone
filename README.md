@@ -4,9 +4,9 @@
 
 Real [Omarchy](https://omarchy.org) running natively on the Nothing Phone (1) "Spacewar". It runs Arch Linux ARM, Hyprland and Omarchy's own packages straight on the phone, with a mainline kernel and no Android underneath.
 
-> Status: **work in progress, paused 18.10.2026.** It is a pocket computer today, not yet a phone.
+> Status: **work in progress.** It is a pocket computer today, not yet a phone.
 
-Built by [@SergeiAug](https://github.com/SergeiAug), with AI coding agents (Claude, Codex, Grok) doing much of the legwork.
+Built by [@SergeiAug](https://github.com/SergeiAug), with help from AI coding tools.
 
 | | |
 |---|---|
@@ -43,7 +43,7 @@ Built by [@SergeiAug](https://github.com/SergeiAug), with AI coding agents (Clau
 ## Build
 
 1. Build the packages once with `makepkg` in each `pkgs/*` directory: kernel, firmware, boot, UCM, mobile shell, keyboard. The modem packages are prebuilt for aarch64.
-2. `sudo tools/build-rootfs.sh <name>` builds `boot.img` and a sparse `userdata` image with Omarchy and the mobile shell, then `tools/verify-image.sh` runs 132 checks. Last verified build: 18.10.2026, all checks pass.
+2. `sudo tools/build-rootfs.sh <name>` builds `boot.img` and a sparse `userdata` image with Omarchy and the mobile shell, then `tools/verify-image.sh` runs 132 checks.
 3. Flash `boot_a`, `boot_b` and `userdata` with fastboot, as `docs/flashing.ru.md` describes.
 
 ## Safety
